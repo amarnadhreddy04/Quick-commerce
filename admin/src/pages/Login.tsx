@@ -14,11 +14,13 @@ export default function Login() {
     return <Navigate to="/" replace />;
   }
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const valid = login(email, password);
-    if (!valid) {
-      setError('Invalid email or password');
+    setError('');
+    try {
+      await login(email, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
     }
   };
 

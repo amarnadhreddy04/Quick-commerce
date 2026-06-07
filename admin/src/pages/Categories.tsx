@@ -9,9 +9,9 @@ export default function Categories() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', icon: 'grid', color: '#E8F5EE' });
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    addCategory(form);
+    await addCategory(form);
     setForm({ name: '', icon: 'grid', color: '#E8F5EE' });
     setShowModal(false);
   };

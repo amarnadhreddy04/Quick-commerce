@@ -4,17 +4,39 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 
 export {
   ErrorBoundary,
 } from 'expo-router';
 
-export const unstable_settings = {
-  initialRouteName: '(tabs)',
-};
-
 SplashScreen.preventAutoHideAsync();
+
+function RootNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  return (
+    <CartProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={!!user}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="category/[id]"
+            options={{ headerShown: true, title: 'Category', headerBackTitle: 'Back' }}
+          />
+        </Stack.Protected>
+        <Stack.Protected guard={!user}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
+    </CartProvider>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -36,14 +58,8 @@ export default function RootLayout() {
   }
 
   return (
-    <CartProvider>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="category/[id]"
-          options={{ title: 'Category', headerBackTitle: 'Back' }}
-        />
-      </Stack>
-    </CartProvider>
+    <AuthProvider>
+      <RootNavigator />
+    </AuthProvider>
   );
 }

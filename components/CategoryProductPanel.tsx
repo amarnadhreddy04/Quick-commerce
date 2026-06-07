@@ -1,9 +1,12 @@
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
-import ProductListItem from '@/components/ProductListItem';
+import CategoryPromoBanner from '@/components/CategoryPromoBanner';
+import GridProductCard from '@/components/GridProductCard';
+import SubCategoryPills from '@/components/SubCategoryPills';
 import Colors from '@/constants/Colors';
 import { spacing } from '@/constants/theme';
-import { products } from '@/data/mockData';
+import { products, promoBanners, subCategories } from '@/data/mockData';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Category } from '@/types';
 
@@ -14,32 +17,54 @@ type Props = {
 export default function CategoryProductPanel({ category }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const categoryProducts = products.filter((product) => product.categoryId === category.id);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedSubCategory(null);
+  }, [category.id]);
+
+  const banner = promoBanners.find((item) => item.categoryId === category.id);
+  const categorySubCategories = subCategories.filter((item) => item.categoryId === category.id);
+
+  const categoryProducts = useMemo(() => {
+    const filtered = products.filter((product) => product.categoryId === category.id);
+    if (!selectedSubCategory) return filtered;
+    return filtered.filter((product) => product.subCategoryId === selectedSubCategory);
+  }, [category.id, selectedSubCategory]);
 
   return (
     <View style={[styles.panel, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>{category.name}</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {categoryProducts.length} items available
-        </Text>
-      </View>
-
       <FlatList
         data={categoryProducts}
         keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            {banner ? <CategoryPromoBanner banner={banner} /> : null}
+            <SubCategoryPills
+              items={categorySubCategories}
+              selectedId={selectedSubCategory}
+              onSelect={setSelectedSubCategory}
+            />
+          </>
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>📦</Text>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No products yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No products found</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              Products for {category.name} will appear here soon.
+              Try another filter in {category.name}.
             </Text>
           </View>
         }
-        renderItem={({ item }) => <ProductListItem product={item} />}
+        renderItem={({ item }) => (
+          <View style={styles.cardWrap}>
+            <GridProductCard product={item} />
+          </View>
+        )}
       />
     </View>
   );
@@ -49,26 +74,21 @@ const styles = StyleSheet.create({
   panel: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  subtitle: {
-    fontSize: 12,
-    marginTop: 2,
-  },
   list: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.sm,
     paddingBottom: spacing.xxl,
+  },
+  row: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  cardWrap: {
+    flex: 1,
+    maxWidth: '50%',
   },
   empty: {
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 40,
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
   },

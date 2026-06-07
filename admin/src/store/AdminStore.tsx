@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -7,13 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import {
-  seedCategories,
-  seedCustomers,
-  seedOrders,
-  seedProducts,
-  seedSettings,
-} from '../data/seed';
+import { api, getAuthToken, setAuthToken } from '../lib/api';
 import type {
   AppSettings,
   Category,
@@ -23,160 +18,152 @@ import type {
   Product,
 } from '../types';
 
-const STORAGE_KEY = 'milkbasket-admin-data';
-
-type AdminData = {
+type AdminStoreValue = {
+  loading: boolean;
   products: Product[];
   categories: Category[];
   orders: Order[];
   customers: Customer[];
   settings: AppSettings;
-};
-
-type AdminStoreValue = AdminData & {
   isAuthenticated: boolean;
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  addProduct: (product: Omit<Product, 'id'>) => void;
-  updateProduct: (id: string, updates: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  updateCategory: (id: string, updates: Partial<Category>) => void;
-  deleteCategory: (id: string) => void;
-  updateOrderStatus: (id: string, status: OrderStatus) => void;
-  updateSettings: (settings: AppSettings) => void;
-  toggleCustomer: (id: string) => void;
+  refreshAll: () => Promise<void>;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
+  updateSettings: (settings: AppSettings) => Promise<void>;
+  toggleCustomer: (id: string) => Promise<void>;
 };
 
 const AdminContext = createContext<AdminStoreValue | null>(null);
 
-function loadData(): AdminData {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    return JSON.parse(stored) as AdminData;
-  }
-  return {
-    products: seedProducts,
-    categories: seedCategories,
-    orders: seedOrders,
-    customers: seedCustomers,
-    settings: seedSettings,
-  };
-}
+const defaultSettings: AppSettings = {
+  deliveryCutoff: '11:00 PM',
+  deliverySlot: 'Tomorrow, 6:00 AM – 8:00 AM',
+  minOrderValue: 99,
+  deliveryFee: 15,
+};
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<AdminData>(loadData);
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => sessionStorage.getItem('milkbasket-admin-auth') === 'true'
-  );
+  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!getAuthToken());
+
+  const refreshAll = useCallback(async () => {
+    const [productsRes, categoriesRes, ordersRes, customersRes, settingsRes] = await Promise.all([
+      api.getProducts(),
+      api.getCategories(),
+      api.getOrders(),
+      api.getCustomers(),
+      api.getSettings(),
+    ]);
+
+    setProducts(productsRes.products as Product[]);
+    setCategories(categoriesRes.categories as Category[]);
+    setOrders(ordersRes.orders as Order[]);
+    setCustomers(customersRes.customers as Customer[]);
+    setSettings(settingsRes.settings as AppSettings);
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
-
-  const value = useMemo<AdminStoreValue>(() => {
-    const login = (email: string, password: string) => {
-      const valid = email === 'admin@milkbasket.com' && password === 'admin123';
-      if (valid) {
-        setIsAuthenticated(true);
-        sessionStorage.setItem('milkbasket-admin-auth', 'true');
+    async function bootstrap() {
+      if (!getAuthToken()) {
+        setLoading(false);
+        return;
       }
-      return valid;
-    };
+      try {
+        await refreshAll();
+        setIsAuthenticated(true);
+      } catch {
+        setAuthToken(null);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+    bootstrap();
+  }, [refreshAll]);
 
-    const logout = () => {
-      setIsAuthenticated(false);
-      sessionStorage.removeItem('milkbasket-admin-auth');
-    };
-
-    const addProduct = (product: Omit<Product, 'id'>) => {
-      setData((current) => ({
-        ...current,
-        products: [
-          ...current.products,
-          { ...product, id: `p${Date.now()}` },
-        ],
-      }));
-    };
-
-    const updateProduct = (id: string, updates: Partial<Product>) => {
-      setData((current) => ({
-        ...current,
-        products: current.products.map((item) =>
-          item.id === id ? { ...item, ...updates } : item
-        ),
-      }));
-    };
-
-    const deleteProduct = (id: string) => {
-      setData((current) => ({
-        ...current,
-        products: current.products.filter((item) => item.id !== id),
-      }));
-    };
-
-    const addCategory = (category: Omit<Category, 'id'>) => {
-      const id = category.name.toLowerCase().replace(/\s+/g, '-');
-      setData((current) => ({
-        ...current,
-        categories: [...current.categories, { ...category, id }],
-      }));
-    };
-
-    const updateCategory = (id: string, updates: Partial<Category>) => {
-      setData((current) => ({
-        ...current,
-        categories: current.categories.map((item) =>
-          item.id === id ? { ...item, ...updates } : item
-        ),
-      }));
-    };
-
-    const deleteCategory = (id: string) => {
-      setData((current) => ({
-        ...current,
-        categories: current.categories.filter((item) => item.id !== id),
-      }));
-    };
-
-    const updateOrderStatus = (id: string, status: OrderStatus) => {
-      setData((current) => ({
-        ...current,
-        orders: current.orders.map((item) =>
-          item.id === id ? { ...item, status } : item
-        ),
-      }));
-    };
-
-    const updateSettings = (settings: AppSettings) => {
-      setData((current) => ({ ...current, settings }));
-    };
-
-    const toggleCustomer = (id: string) => {
-      setData((current) => ({
-        ...current,
-        customers: current.customers.map((item) =>
-          item.id === id ? { ...item, active: !item.active } : item
-        ),
-      }));
-    };
-
-    return {
-      ...data,
+  const value = useMemo<AdminStoreValue>(
+    () => ({
+      loading,
+      products,
+      categories,
+      orders,
+      customers,
+      settings,
       isAuthenticated,
-      login,
-      logout,
-      addProduct,
-      updateProduct,
-      deleteProduct,
-      addCategory,
-      updateCategory,
-      deleteCategory,
-      updateOrderStatus,
-      updateSettings,
-      toggleCustomer,
-    };
-  }, [data, isAuthenticated]);
+      refreshAll,
+      login: async (email, password) => {
+        const { token, user } = await api.login(email, password);
+        if (user.role !== 'admin') {
+          throw new Error('Admin access required');
+        }
+        setAuthToken(token);
+        setIsAuthenticated(true);
+        await refreshAll();
+        return true;
+      },
+      logout: () => {
+        setAuthToken(null);
+        setIsAuthenticated(false);
+        setProducts([]);
+        setCategories([]);
+        setOrders([]);
+        setCustomers([]);
+      },
+      addProduct: async (product) => {
+        await api.createProduct(product);
+        await refreshAll();
+      },
+      updateProduct: async (id, updates) => {
+        await api.updateProduct(id, updates);
+        await refreshAll();
+      },
+      deleteProduct: async (id) => {
+        await api.deleteProduct(id);
+        await refreshAll();
+      },
+      addCategory: async (category) => {
+        await api.createCategory(category);
+        await refreshAll();
+      },
+      deleteCategory: async (id) => {
+        await api.deleteCategory(id);
+        await refreshAll();
+      },
+      updateOrderStatus: async (id, status) => {
+        await api.updateOrderStatus(id, status);
+        await refreshAll();
+      },
+      updateSettings: async (nextSettings) => {
+        await api.updateSettings(nextSettings);
+        setSettings(nextSettings);
+      },
+      toggleCustomer: async (id) => {
+        await api.toggleCustomer(id);
+        await refreshAll();
+      },
+    }),
+    [
+      loading,
+      products,
+      categories,
+      orders,
+      customers,
+      settings,
+      isAuthenticated,
+      refreshAll,
+    ]
+  );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }

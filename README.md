@@ -34,13 +34,22 @@ Flutter is also a strong choice for mobile apps. React Native was picked here be
 
 ## Getting Started
 
-### Mobile App
+### 1. Start the API & database
 
 ```bash
 cd Projects/milkbasket-app
+npm run server:seed   # first time only
+npm run server        # http://localhost:3001
+```
+
+### 2. Mobile App
+
+```bash
 npm install
 npm start
 ```
+
+**Test account:** `amar@example.com` / `user123`
 
 Then choose how to run:
 
@@ -50,10 +59,9 @@ Then choose how to run:
 
 Scan the QR code with **Expo Go** on your phone for the fastest mobile preview.
 
-### Admin Panel
+### 3. Admin Panel
 
 ```bash
-cd Projects/milkbasket-app
 npm run admin
 ```
 
@@ -62,18 +70,19 @@ Open http://localhost:5173 and sign in with:
 - **Email:** `admin@milkbasket.com`
 - **Password:** `admin123`
 
-Admin data is stored in browser `localStorage` for now (demo mode).
+The admin panel reads and writes data through the API server.
 
 ## Project Structure
 
 ```
 app/               # Mobile app screens
+  (auth)/          # Login & registration
 admin/             # Web admin panel
-  src/pages/       # Dashboard, Products, Orders, etc.
-  src/store/       # Admin state (localStorage)
+server/            # API + SQLite database
+  data/            # milkbasket.db
 components/        # Mobile UI components
-context/           # Cart state
-data/              # Mock products and orders
+context/           # Auth & cart state
+lib/               # API client
 constants/         # Theme colors
 ```
 

@@ -1,8 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
-import { categoryIconMap } from '@/constants/categoryIcons';
 import { radius, spacing } from '@/constants/theme';
 import { categories } from '@/data/mockData';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -27,30 +25,30 @@ export default function CategorySidePanel({ selectedId, onSelect }: Props) {
             <Pressable
               key={category.id}
               onPress={() => onSelect(category)}
-              style={[
-                styles.item,
-                isSelected && { backgroundColor: colors.wallet, borderLeftColor: colors.primary },
-              ]}>
+              style={styles.item}>
               <View
                 style={[
-                  styles.iconWrap,
-                  { backgroundColor: isSelected ? colors.card : category.color },
+                  styles.thumbnail,
+                  {
+                    backgroundColor: category.color,
+                    borderColor: isSelected ? colors.primary : 'transparent',
+                  },
+                  isSelected && styles.thumbnailSelected,
                 ]}>
-                <Ionicons
-                  name={categoryIconMap[category.icon] ?? 'grid-outline'}
-                  size={20}
-                  color={isSelected ? colors.primary : colors.textSecondary}
-                />
+                <Text style={styles.thumbnailEmoji}>{category.thumbnail}</Text>
               </View>
               <Text
                 style={[
                   styles.name,
-                  { color: isSelected ? colors.primary : colors.text },
+                  { color: isSelected ? colors.primary : colors.textSecondary },
                   isSelected && styles.nameSelected,
                 ]}
                 numberOfLines={2}>
                 {category.name}
               </Text>
+              {isSelected ? (
+                <View style={[styles.activeBar, { backgroundColor: colors.primary }]} />
+              ) : null}
             </Pressable>
           );
         })}
@@ -61,34 +59,51 @@ export default function CategorySidePanel({ selectedId, onSelect }: Props) {
 
 const styles = StyleSheet.create({
   panel: {
-    width: 96,
+    width: 88,
     borderRightWidth: 1,
   },
   list: {
     paddingVertical: spacing.sm,
+    paddingBottom: spacing.xxl,
   },
   item: {
     alignItems: 'center',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xs,
-    borderLeftWidth: 3,
-    borderLeftColor: 'transparent',
+    position: 'relative',
     gap: spacing.sm,
   },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
+  thumbnail: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+  },
+  thumbnailSelected: {
+    transform: [{ scale: 1.05 }],
+  },
+  thumbnailEmoji: {
+    fontSize: 26,
   },
   name: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
     lineHeight: 13,
+    paddingHorizontal: 2,
   },
   nameSelected: {
     fontWeight: '700',
+  },
+  activeBar: {
+    position: 'absolute',
+    left: 0,
+    top: '30%',
+    width: 3,
+    height: '40%',
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
 });

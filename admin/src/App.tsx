@@ -11,7 +11,11 @@ import Settings from './pages/Settings';
 import { AdminProvider, useAdminStore } from './store/AdminStore';
 
 function ProtectedRoutes() {
-  const { isAuthenticated } = useAdminStore();
+  const { isAuthenticated, loading } = useAdminStore();
+
+  if (loading) {
+    return <div style={{ padding: 24 }}>Loading admin panel...</div>;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

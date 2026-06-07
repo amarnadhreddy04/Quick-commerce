@@ -3,6 +3,24 @@ export type Category = {
   name: string;
   icon: string;
   color: string;
+  thumbnail: string;
+};
+
+export type SubCategory = {
+  id: string;
+  categoryId: string;
+  name: string;
+};
+
+export type PromoBanner = {
+  id: string;
+  categoryId: string;
+  title: string;
+  subtitle: string;
+  cta: string;
+  emojis: string[];
+  slide: number;
+  total: number;
 };
 
 export type Product = {
@@ -10,6 +28,7 @@ export type Product = {
   name: string;
   brand: string;
   categoryId: string;
+  subCategoryId?: string;
   price: number;
   mrp?: number;
   unit: string;

@@ -25,6 +25,10 @@ export default function CategoriesScreen() {
     }
   }, [id]);
 
+  const handleCategorySelect = (category: Category) => {
+    setSelectedCategory(category);
+  };
+
   return (
     <View
       style={[
@@ -37,7 +41,7 @@ export default function CategoriesScreen() {
       <View style={styles.split}>
         <CategorySidePanel
           selectedId={selectedCategory.id}
-          onSelect={setSelectedCategory}
+          onSelect={handleCategorySelect}
         />
         <CategoryProductPanel category={selectedCategory} />
       </View>

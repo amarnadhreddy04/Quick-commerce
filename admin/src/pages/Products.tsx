@@ -47,7 +47,7 @@ export default function Products() {
     setShowModal(true);
   };
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const payload = {
       ...form,
@@ -56,9 +56,9 @@ export default function Products() {
     };
 
     if (editing) {
-      updateProduct(editing.id, payload);
+      await updateProduct(editing.id, payload);
     } else {
-      addProduct(payload);
+      await addProduct(payload);
     }
     setShowModal(false);
   };

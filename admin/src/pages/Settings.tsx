@@ -9,9 +9,9 @@ export default function Settings() {
   const [form, setForm] = useState(settings);
   const [saved, setSaved] = useState(false);
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    updateSettings(form);
+    await updateSettings(form);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
