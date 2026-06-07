@@ -10,8 +10,8 @@ function formatSettings(row) {
   return {
     deliveryCutoff: row.delivery_cutoff,
     deliverySlot: row.delivery_slot,
-    minOrderValue: row.min_order_value,
-    deliveryFee: row.delivery_fee,
+    minOrderValue: 299,
+    deliveryFee: 30,
   };
 }
 

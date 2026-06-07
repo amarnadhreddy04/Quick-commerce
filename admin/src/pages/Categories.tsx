@@ -1,18 +1,57 @@
 import { useState, type FormEvent } from 'react';
 
+import ImageUrlField from '../components/ImageUrlField';
 import PageHeader from '../components/PageHeader';
 import '../components/shared.css';
 import { useAdminStore } from '../store/AdminStore';
+import type { Category } from '../types';
+
+const emptyCategory = {
+  name: '',
+  icon: 'grid',
+  color: '#E8F5EE',
+  thumbnail: '',
+  description: '',
+};
 
 export default function Categories() {
-  const { categories, addCategory, deleteCategory } = useAdminStore();
+  const { categories, addCategory, updateCategory, deleteCategory } = useAdminStore();
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', icon: 'grid', color: '#E8F5EE' });
+  const [editing, setEditing] = useState<Category | null>(null);
+  const [form, setForm] = useState(emptyCategory);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyCategory);
+    setShowModal(true);
+  };
+
+  const openEdit = (category: Category) => {
+    setEditing(category);
+    setForm({
+      name: category.name,
+      icon: category.icon,
+      color: category.color,
+      thumbnail: category.thumbnail ?? '',
+      description: category.description ?? '',
+    });
+    setShowModal(true);
+  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    await addCategory(form);
-    setForm({ name: '', icon: 'grid', color: '#E8F5EE' });
+    const payload = {
+      ...form,
+      thumbnail: form.thumbnail.trim(),
+      description: form.description.trim() || undefined,
+    };
+
+    if (editing) {
+      await updateCategory(editing.id, payload);
+    } else {
+      await addCategory(payload);
+    }
+    setForm(emptyCategory);
     setShowModal(false);
   };
 
@@ -20,9 +59,9 @@ export default function Categories() {
     <div>
       <PageHeader
         title="Categories"
-        subtitle="Organize products by category"
+        subtitle="Organize products with images and descriptions"
         action={
-          <button type="button" className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <button type="button" className="btn btn-primary" onClick={openCreate}>
             + Add Category
           </button>
         }
@@ -41,19 +80,38 @@ export default function Categories() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 22,
+                  overflow: 'hidden',
                 }}>
-                📁
+                {category.thumbnail?.startsWith('http') ? (
+                  <img
+                    src={category.thumbnail}
+                    alt={category.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 22 }}>📁</span>
+                )}
               </span>
-              <button
-                type="button"
-                className="btn btn-danger btn-sm"
-                onClick={() => deleteCategory(category.id)}>
-                Delete
-              </button>
+              <div className="actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => openEdit(category)}>
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={() => deleteCategory(category.id)}>
+                  Delete
+                </button>
+              </div>
             </div>
             <strong style={{ display: 'block', marginTop: 12 }}>{category.name}</strong>
             <small>ID: {category.id}</small>
+            {category.description ? (
+              <span className="description-snippet">{category.description}</span>
+            ) : null}
           </div>
         ))}
       </div>
@@ -61,7 +119,7 @@ export default function Categories() {
       {showModal ? (
         <div className="modal-backdrop" onClick={() => setShowModal(false)}>
           <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-            <h3>Add Category</h3>
+            <h3>{editing ? 'Edit Category' : 'Add Category'}</h3>
             <div className="form-grid">
               <label className="full">
                 Name
@@ -86,13 +144,27 @@ export default function Categories() {
                   onChange={(e) => setForm({ ...form, color: e.target.value })}
                 />
               </label>
+              <ImageUrlField
+                label="Category Image URL"
+                value={form.thumbnail}
+                onChange={(thumbnail) => setForm({ ...form, thumbnail })}
+              />
+              <label className="full">
+                Description
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Describe this category for customers..."
+                  rows={3}
+                />
+              </label>
             </div>
             <div className="modal-actions">
               <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary">
-                Add Category
+                {editing ? 'Save Changes' : 'Add Category'}
               </button>
             </div>
           </form>

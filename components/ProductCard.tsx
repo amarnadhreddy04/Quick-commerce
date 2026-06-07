@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import ProductImage from '@/components/ProductImage';
 import QuantityStepper from '@/components/QuantityStepper';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
@@ -29,7 +30,7 @@ export default function ProductCard({ product, onPress, fullWidth = false }: Pro
         { backgroundColor: colors.card },
       ]}>
       <View style={[styles.imageWrap, { backgroundColor: colors.background }]}>
-        <Text style={styles.emoji}>{product.image}</Text>
+        <ProductImage product={product} style={styles.productImage} emojiStyle={styles.emoji} />
         {product.subscription ? (
           <View style={[styles.badge, { backgroundColor: colors.wallet }]}>
             <Text style={[styles.badgeText, { color: colors.primary }]}>Subscribe</Text>
@@ -79,6 +80,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    overflow: 'hidden',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
   emoji: {
     fontSize: 44,

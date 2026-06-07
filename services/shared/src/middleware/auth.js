@@ -41,10 +41,22 @@ export function formatUser(row) {
     phone: row.phone,
     role: row.role,
     location: row.location,
+    pincode: row.pincode ?? null,
     walletBalance: row.wallet_balance,
     active: !!row.active,
     ordersCount: row.orders_count ?? 0,
     createdAt: row.created_at,
+  };
+}
+
+export function formatCategory(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon,
+    color: row.color,
+    thumbnail: row.thumbnail,
+    description: row.description ?? '',
   };
 }
 
@@ -59,6 +71,7 @@ export function formatProduct(row) {
     mrp: row.mrp,
     unit: row.unit,
     image: row.image,
+    description: row.description ?? '',
     subscription: !!row.subscription,
     tag: row.tag,
     stock: row.stock,

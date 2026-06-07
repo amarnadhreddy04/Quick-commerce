@@ -95,7 +95,7 @@ transaction(() => {
   run(
     `INSERT INTO app_settings (id, delivery_cutoff, delivery_slot, min_order_value, delivery_fee)
      VALUES (1, ?, ?, ?, ?)`,
-    ['11:00 PM', 'Tomorrow, 6:00 AM – 8:00 AM', 99, 15]
+    ['11:00 PM', 'Tomorrow, 6:00 AM – 8:00 AM', 299, 30]
   );
 });
 

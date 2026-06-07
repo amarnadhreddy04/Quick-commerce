@@ -1,15 +1,40 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
+import UnavailableLocation from '@/components/UnavailableLocation';
 import Colors from '@/constants/Colors';
-import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+import { useCartOptional } from '@/context/CartContext';
+import { useDeliveryArea } from '@/context/DeliveryAreaContext';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function TabLayout() {
+  const { user } = useAuth();
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { itemCount } = useCart();
+  const { status } = useDeliveryArea();
+  const itemCount = useCartOptional()?.itemCount ?? 0;
+
+  useEffect(() => {
+    if (!user) {
+      router.replace('/(auth)/login');
+    }
+  }, [user, router]);
+
+  if (!user) {
+    return null;
+  }
+
+  if (status === 'loading') {
+    return <UnavailableLocation mode="loading" />;
+  }
+
+  if (status === 'unavailable') {
+    return <UnavailableLocation mode="unavailable" />;
+  }
 
   return (
     <Tabs

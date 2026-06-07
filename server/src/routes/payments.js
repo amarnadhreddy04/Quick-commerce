@@ -35,15 +35,32 @@ router.get('/config', authRequired, (_req, res) => {
     keyId: getRazorpayKeyId(),
     configured: isRazorpayConfigured(),
     currency: 'INR',
-    methods: ['razorpay', 'wallet'],
+    methods: isRazorpayConfigured() ? ['razorpay', 'wallet', 'cod'] : ['demo', 'wallet', 'cod'],
+    demoMode: !isRazorpayConfigured(),
   });
 });
+
+const FREE_DELIVERY_MIN_ORDER = 299;
+const DELIVERY_CHARGE = 30;
+
+function calculateOrderAmount(items) {
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const deliveryFee = subtotal >= FREE_DELIVERY_MIN_ORDER ? 0 : DELIVERY_CHARGE;
+  return { subtotal, deliveryFee, total: subtotal + deliveryFee };
+}
 
 router.post('/create-order', authRequired, async (req, res) => {
   const { items, deliverySlot, total, deliveryFee, paymentMethod } = req.body;
 
   if (!items?.length || !total) {
     return res.status(400).json({ error: 'Cart items and total are required' });
+  }
+
+  const expected = calculateOrderAmount(items);
+  if (Math.abs(total - expected.total) > 0.01 || (deliveryFee ?? 0) !== expected.deliveryFee) {
+    return res.status(400).json({
+      error: `Order total mismatch. Expected ₹${expected.total} (delivery fee ₹${expected.deliveryFee})`,
+    });
   }
 
   const user = queryOne('SELECT * FROM users WHERE id = ?', [req.user.id]);
@@ -53,6 +70,28 @@ router.post('/create-order', authRequired, async (req, res) => {
     month: 'short',
     year: 'numeric',
   });
+
+  if (paymentMethod === 'cod') {
+    transaction(() => {
+      run(
+        `INSERT INTO orders (id, user_id, date, status, total, delivery_slot, items_count, payment_status, payment_method, razorpay_order_id, razorpay_payment_id)
+         VALUES (?, ?, ?, 'scheduled', ?, ?, ?, 'cod', 'cod', NULL, NULL)`,
+        [orderId, req.user.id, date, total, deliverySlot, items.length]
+      );
+      items.forEach((item) => {
+        run(
+          'INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
+          [uuid(), orderId, item.productId, item.quantity, item.price]
+        );
+      });
+    });
+
+    const order = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
+    return res.status(201).json({
+      paymentMethod: 'cod',
+      order: formatOrder(order),
+    });
+  }
 
   if (paymentMethod === 'wallet') {
     if (user.wallet_balance < total) {

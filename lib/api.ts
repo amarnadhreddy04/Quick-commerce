@@ -14,6 +14,7 @@ export type ApiUser = {
   phone?: string;
   role: 'customer' | 'admin';
   location?: string;
+  pincode?: string | null;
   walletBalance: number;
 };
 
@@ -39,16 +40,23 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers.Authorization = `Bearer ${options.token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch {
+    throw new Error(
+      `Cannot reach API server at ${API_URL}. Start it with "npm run server" and use your computer IP on a physical device.`
+    );
+  }
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.error ?? 'Request failed');
+    throw new Error(data.error ?? `Request failed (${response.status})`);
   }
 
   return data as T;
@@ -74,6 +82,7 @@ export function registerRequest(payload: {
   phone: string;
   password: string;
   location?: string;
+  pincode: string;
 }) {
   return apiRequest<{ token: string; user: ApiUser; notifications: RegisterNotifications }>(
     '/auth/register',
@@ -129,6 +138,9 @@ export type SyncState = {
 export type DeliveryCheck = {
   available: boolean;
   message?: string;
+  pincode?: string;
+  label?: string;
+  allowedPincodes?: { pincode: string; label: string }[];
   area?: {
     id: string;
     name: string;
@@ -142,6 +154,15 @@ export type DeliveryCheck = {
   };
   areasConfigured?: boolean;
 };
+
+export async function checkDeliveryPincode(pincode: string): Promise<DeliveryCheck> {
+  const { checkPincodeLocally } = await import('@/lib/deliveryPincodes');
+  try {
+    return await apiRequest<DeliveryCheck>(`/areas/check-pincode?pincode=${pincode}`);
+  } catch {
+    return checkPincodeLocally(pincode);
+  }
+}
 
 export function checkDeliveryArea(lat: number, lng: number) {
   return apiRequest<DeliveryCheck>(`/areas/check?lat=${lat}&lng=${lng}`);

@@ -18,6 +18,18 @@ import {
 } from '@/lib/api';
 
 const TOKEN_KEY = 'milkbasket-token';
+const PINCODE_KEY = 'milkbasket-pincode';
+
+async function withStoredPincode(user: ApiUser): Promise<ApiUser> {
+  if (user.pincode?.replace(/\D/g, '').length === 6) {
+    return user;
+  }
+  const stored = (await AsyncStorage.getItem(PINCODE_KEY))?.replace(/\D/g, '');
+  if (stored?.length === 6) {
+    return { ...user, pincode: stored };
+  }
+  return user;
+}
 
 type AuthContextValue = {
   user: ApiUser | null;
@@ -30,6 +42,7 @@ type AuthContextValue = {
     phone: string;
     password: string;
     location?: string;
+    pincode: string;
   }) => Promise<RegisterNotifications>;
   logout: () => Promise<void>;
 };
@@ -43,6 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const persistSession = useCallback(async (nextToken: string, nextUser: ApiUser) => {
     await AsyncStorage.setItem(TOKEN_KEY, nextToken);
+    if (nextUser.pincode) {
+      await AsyncStorage.setItem(PINCODE_KEY, nextUser.pincode);
+    }
     setToken(nextToken);
     setUser(nextUser);
   }, []);
@@ -54,8 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!storedToken) return;
 
         const { user: storedUser } = await meRequest(storedToken);
+        const userWithPincode = await withStoredPincode(storedUser);
         setToken(storedToken);
-        setUser(storedUser);
+        setUser(userWithPincode);
+        if (userWithPincode.pincode) {
+          await AsyncStorage.setItem(PINCODE_KEY, userWithPincode.pincode);
+        }
       } catch {
         await AsyncStorage.removeItem(TOKEN_KEY);
       } finally {
@@ -76,15 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (nextUser.role !== 'customer') {
           throw new Error('Please use the admin panel for admin accounts');
         }
-        await persistSession(nextToken, nextUser);
+        const userWithPincode = await withStoredPincode(nextUser);
+        await persistSession(nextToken, userWithPincode);
       },
       register: async (payload) => {
         const { token: nextToken, user: nextUser, notifications } = await registerRequest(payload);
+        await AsyncStorage.setItem(PINCODE_KEY, payload.pincode);
         await persistSession(nextToken, nextUser);
         return notifications;
       },
       logout: async () => {
-        await AsyncStorage.removeItem(TOKEN_KEY);
+        await AsyncStorage.multiRemove([TOKEN_KEY, PINCODE_KEY]);
         setToken(null);
         setUser(null);
       },

@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import ProductImage from '@/components/ProductImage';
 import QuantityStepper from '@/components/QuantityStepper';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
@@ -20,7 +21,7 @@ export default function ProductListItem({ product }: Props) {
   return (
     <View style={[styles.card, shadows.card, { backgroundColor: colors.card }]}>
       <View style={[styles.imageWrap, { backgroundColor: colors.background }]}>
-        <Text style={styles.emoji}>{product.image}</Text>
+        <ProductImage product={product} style={styles.productImage} emojiStyle={styles.emoji} />
       </View>
 
       <View style={styles.info}>
@@ -68,6 +69,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
   emoji: {
     fontSize: 32,

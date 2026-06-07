@@ -1,14 +1,13 @@
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import UnavailableLocation from '@/components/UnavailableLocation';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { CatalogProvider } from '@/context/CatalogContext';
-import { DeliveryAreaProvider, useDeliveryArea } from '@/context/DeliveryAreaContext';
+import { DeliveryAreaProvider } from '@/context/DeliveryAreaContext';
 
 export {
   ErrorBoundary,
@@ -16,24 +15,35 @@ export {
 
 SplashScreen.preventAutoHideAsync();
 
-function AppContent() {
-  const { status } = useDeliveryArea();
+function AuthRedirect() {
+  const { user, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
 
-  if (status === 'loading') {
-    return <UnavailableLocation mode="loading" />;
-  }
+  useEffect(() => {
+    if (loading) return;
 
-  if (status === 'permission_denied') {
-    return <UnavailableLocation mode="permission_denied" />;
-  }
+    const inAuthGroup = segments[0] === '(auth)';
 
-  if (status === 'unavailable') {
-    return <UnavailableLocation mode="unavailable" />;
-  }
+    if (!user && !inAuthGroup) {
+      router.replace('/(auth)/login');
+      return;
+    }
 
+    if (user && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [user, loading, segments, router]);
+
+  return null;
+}
+
+function RootStack() {
   return (
-    <CartProvider>
+    <>
+      <AuthRedirect />
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="category/[id]"
@@ -43,30 +53,16 @@ function AppContent() {
           name="payment"
           options={{ headerShown: true, title: 'Payment', headerBackTitle: 'Basket' }}
         />
+        <Stack.Screen
+          name="checkout"
+          options={{ headerShown: true, title: 'Checkout', headerBackTitle: 'Payment' }}
+        />
+        <Stack.Screen
+          name="order-success"
+          options={{ headerShown: true, title: 'Order Placed', headerBackVisible: false }}
+        />
       </Stack>
-    </CartProvider>
-  );
-}
-
-function RootNavigator() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return null;
-  }
-
-  if (!user) {
-    return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-      </Stack>
-    );
-  }
-
-  return (
-    <DeliveryAreaProvider>
-      <AppContent />
-    </DeliveryAreaProvider>
+    </>
   );
 }
 
@@ -85,14 +81,14 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  if (!loaded) {
-    return null;
-  }
-
   return (
     <AuthProvider>
       <CatalogProvider>
-        <RootNavigator />
+        <CartProvider>
+          <DeliveryAreaProvider>
+            {loaded ? <RootStack /> : null}
+          </DeliveryAreaProvider>
+        </CartProvider>
       </CatalogProvider>
     </AuthProvider>
   );

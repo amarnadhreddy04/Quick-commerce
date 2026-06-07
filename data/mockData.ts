@@ -1,4 +1,8 @@
+import { CATEGORY_IMAGES, PRODUCT_IMAGES } from '@/constants/mediaUrls';
 import { Category, Order, Product, PromoBanner, SubCategory } from '@/types';
+
+const productImage = (id: string, categoryId: keyof typeof CATEGORY_IMAGES) =>
+  PRODUCT_IMAGES[id] ?? CATEGORY_IMAGES[categoryId];
 
 export const deliveryCutoff = '11:00 PM';
 export const deliverySlot = 'Tomorrow, 6:00 AM – 8:00 AM';
@@ -6,14 +10,14 @@ export const walletBalance = 248.5;
 export const userLocation = 'Sector 62, Noida';
 
 export const categories: Category[] = [
-  { id: 'milk', name: 'Milk', icon: 'water', color: '#DBEAFE', thumbnail: '🥛' },
-  { id: 'bread', name: 'Bread', icon: 'restaurant', color: '#FEF3C7', thumbnail: '🍞' },
-  { id: 'eggs', name: 'Eggs', icon: 'egg', color: '#FFEDD5', thumbnail: '🥚' },
-  { id: 'fruits', name: 'Fruits', icon: 'leaf', color: '#DCFCE7', thumbnail: '🍎' },
-  { id: 'vegetables', name: 'Vegetables', icon: 'nutrition', color: '#D1FAE5', thumbnail: '🥬' },
-  { id: 'beverages', name: 'Beverages', icon: 'cafe', color: '#E0E7FF', thumbnail: '🧃' },
-  { id: 'snacks', name: 'Snacks', icon: 'fast-food', color: '#FCE7F3', thumbnail: '🍿' },
-  { id: 'breakfast', name: 'Breakfast', icon: 'sunny', color: '#FEF9C3', thumbnail: '🥣' },
+  { id: 'milk', name: 'Milk', icon: 'water', color: '#DBEAFE', thumbnail: CATEGORY_IMAGES.milk },
+  { id: 'bread', name: 'Bread', icon: 'restaurant', color: '#FEF3C7', thumbnail: CATEGORY_IMAGES.bread },
+  { id: 'eggs', name: 'Eggs', icon: 'egg', color: '#FFEDD5', thumbnail: CATEGORY_IMAGES.eggs },
+  { id: 'fruits', name: 'Fruits', icon: 'leaf', color: '#DCFCE7', thumbnail: CATEGORY_IMAGES.fruits },
+  { id: 'vegetables', name: 'Vegetables', icon: 'nutrition', color: '#D1FAE5', thumbnail: CATEGORY_IMAGES.vegetables },
+  { id: 'beverages', name: 'Beverages', icon: 'cafe', color: '#E0E7FF', thumbnail: CATEGORY_IMAGES.beverages },
+  { id: 'snacks', name: 'Snacks', icon: 'fast-food', color: '#FCE7F3', thumbnail: CATEGORY_IMAGES.snacks },
+  { id: 'breakfast', name: 'Breakfast', icon: 'sunny', color: '#FEF9C3', thumbnail: CATEGORY_IMAGES.breakfast },
 ];
 
 export const subCategories: SubCategory[] = [
@@ -45,7 +49,7 @@ export const promoBanners: PromoBanner[] = [
     title: 'Up To 40% Off',
     subtitle: 'On Amul & Mother Dairy Milk',
     cta: 'Buy Now',
-    emojis: ['🥛', '🥛'],
+    emojis: [CATEGORY_IMAGES.milk, CATEGORY_IMAGES.milk],
     slide: 3,
     total: 12,
   },
@@ -55,7 +59,7 @@ export const promoBanners: PromoBanner[] = [
     title: 'Up To 30% Off',
     subtitle: 'On Fresh Breads & Buns',
     cta: 'Buy Now',
-    emojis: ['🍞', '🥖'],
+    emojis: [CATEGORY_IMAGES.bread, CATEGORY_IMAGES.bread],
     slide: 5,
     total: 12,
   },
@@ -65,7 +69,7 @@ export const promoBanners: PromoBanner[] = [
     title: 'Flat ₹20 Off',
     subtitle: 'On Farm Fresh Eggs',
     cta: 'Buy Now',
-    emojis: ['🥚', '🐣'],
+    emojis: [CATEGORY_IMAGES.eggs, CATEGORY_IMAGES.eggs],
     slide: 2,
     total: 8,
   },
@@ -75,7 +79,7 @@ export const promoBanners: PromoBanner[] = [
     title: 'Up To 25% Off',
     subtitle: 'On Seasonal Fruits',
     cta: 'Buy Now',
-    emojis: ['🍎', '🍌'],
+    emojis: [CATEGORY_IMAGES.fruits, CATEGORY_IMAGES.fruits],
     slide: 7,
     total: 15,
   },
@@ -85,7 +89,7 @@ export const promoBanners: PromoBanner[] = [
     title: 'Fresh Daily',
     subtitle: 'Farm-picked vegetables',
     cta: 'Shop Now',
-    emojis: ['🥬', '🍅'],
+    emojis: [CATEGORY_IMAGES.vegetables, CATEGORY_IMAGES.vegetables],
     slide: 4,
     total: 10,
   },
@@ -95,7 +99,7 @@ export const promoBanners: PromoBanner[] = [
     title: 'Up To 35% Off',
     subtitle: 'On Juices & Health Drinks',
     cta: 'Buy Now',
-    emojis: ['🧃', '☕'],
+    emojis: [CATEGORY_IMAGES.beverages, CATEGORY_IMAGES.beverages],
     slide: 6,
     total: 11,
   },
@@ -105,7 +109,7 @@ export const promoBanners: PromoBanner[] = [
     title: 'Snack Fest',
     subtitle: 'Buy 2 Get 1 Free',
     cta: 'Grab Deal',
-    emojis: ['🍿', '🥔'],
+    emojis: [CATEGORY_IMAGES.snacks, CATEGORY_IMAGES.snacks],
     slide: 9,
     total: 14,
   },
@@ -115,7 +119,7 @@ export const promoBanners: PromoBanner[] = [
     title: 'Up To 20% Off',
     subtitle: 'On Oats & Cereals',
     cta: 'Buy Now',
-    emojis: ['🥣', '🌾'],
+    emojis: [CATEGORY_IMAGES.breakfast, CATEGORY_IMAGES.breakfast],
     slide: 1,
     total: 6,
   },
@@ -131,7 +135,7 @@ export const products: Product[] = [
     price: 28,
     mrp: 30,
     unit: '500 ml',
-    image: '🥛',
+    image: productImage('p1', 'milk'),
     subscription: true,
     tag: 'Daily Essential',
   },
@@ -144,7 +148,7 @@ export const products: Product[] = [
     price: 34,
     mrp: 36,
     unit: '500 ml',
-    image: '🥛',
+    image: productImage('p2', 'milk'),
     subscription: true,
   },
   {
@@ -156,7 +160,7 @@ export const products: Product[] = [
     price: 65,
     mrp: 75,
     unit: '500 ml',
-    image: '🥛',
+    image: productImage('p13', 'milk'),
   },
   {
     id: 'p14',
@@ -167,7 +171,7 @@ export const products: Product[] = [
     price: 32,
     mrp: 38,
     unit: '500 ml',
-    image: '🥛',
+    image: productImage('p14', 'milk'),
   },
   {
     id: 'p3',
@@ -178,7 +182,7 @@ export const products: Product[] = [
     price: 45,
     mrp: 50,
     unit: '400 g',
-    image: '🍞',
+    image: productImage('p3', 'bread'),
     tag: 'Fresh Today',
   },
   {
@@ -189,7 +193,7 @@ export const products: Product[] = [
     subCategoryId: 'multigrain',
     price: 55,
     unit: '400 g',
-    image: '🍞',
+    image: productImage('p4', 'bread'),
   },
   {
     id: 'p15',
@@ -200,7 +204,7 @@ export const products: Product[] = [
     price: 40,
     mrp: 45,
     unit: '400 g',
-    image: '🍞',
+    image: productImage('p15', 'bread'),
   },
   {
     id: 'p5',
@@ -211,7 +215,7 @@ export const products: Product[] = [
     price: 72,
     mrp: 80,
     unit: '6 pcs',
-    image: '🥚',
+    image: productImage('p5', 'eggs'),
     subscription: true,
   },
   {
@@ -223,7 +227,7 @@ export const products: Product[] = [
     price: 85,
     mrp: 95,
     unit: '6 pcs',
-    image: '🥚',
+    image: productImage('p16', 'eggs'),
   },
   {
     id: 'p6',
@@ -233,7 +237,7 @@ export const products: Product[] = [
     subCategoryId: 'seasonal',
     price: 48,
     unit: '6 pcs',
-    image: '🍌',
+    image: productImage('p6', 'fruits'),
   },
   {
     id: 'p7',
@@ -244,7 +248,7 @@ export const products: Product[] = [
     price: 120,
     mrp: 140,
     unit: '1 kg',
-    image: '🍎',
+    image: productImage('p7', 'fruits'),
     tag: '20% Off',
   },
   {
@@ -255,7 +259,7 @@ export const products: Product[] = [
     subCategoryId: 'root',
     price: 32,
     unit: '500 g',
-    image: '🍅',
+    image: productImage('p8', 'vegetables'),
   },
   {
     id: 'p9',
@@ -265,7 +269,7 @@ export const products: Product[] = [
     subCategoryId: 'root',
     price: 28,
     unit: '1 kg',
-    image: '🧅',
+    image: productImage('p9', 'vegetables'),
   },
   {
     id: 'p17',
@@ -276,7 +280,7 @@ export const products: Product[] = [
     price: 24,
     mrp: 30,
     unit: '250 g',
-    image: '🥬',
+    image: productImage('p17', 'vegetables'),
   },
   {
     id: 'p10',
@@ -286,7 +290,7 @@ export const products: Product[] = [
     subCategoryId: 'juice',
     price: 110,
     unit: '1 L',
-    image: '🧃',
+    image: productImage('p10', 'beverages'),
   },
   {
     id: 'p18',
@@ -297,7 +301,7 @@ export const products: Product[] = [
     price: 145,
     mrp: 165,
     unit: '100 g',
-    image: '☕',
+    image: productImage('p18', 'beverages'),
   },
   {
     id: 'p11',
@@ -308,7 +312,7 @@ export const products: Product[] = [
     price: 165,
     mrp: 185,
     unit: '400 g',
-    image: '🥣',
+    image: productImage('p11', 'breakfast'),
     tag: 'Healthy',
   },
   {
@@ -320,7 +324,7 @@ export const products: Product[] = [
     price: 210,
     mrp: 240,
     unit: '475 g',
-    image: '🌾',
+    image: productImage('p19', 'breakfast'),
   },
   {
     id: 'p12',
@@ -330,7 +334,7 @@ export const products: Product[] = [
     subCategoryId: 'chips',
     price: 20,
     unit: '52 g',
-    image: '🥔',
+    image: productImage('p12', 'snacks'),
   },
   {
     id: 'p20',
@@ -341,7 +345,7 @@ export const products: Product[] = [
     price: 30,
     mrp: 35,
     unit: '250 g',
-    image: '🍪',
+    image: productImage('p20', 'snacks'),
   },
 ];
 

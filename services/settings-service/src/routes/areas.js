@@ -70,12 +70,84 @@ function checkAvailability(lat, lng) {
   };
 }
 
+const DEFAULT_PINCODES = [
+  { pincode: '523201', label: 'Addanki, Andhra Pradesh' },
+  { pincode: '522601', label: 'Vinukonda, Andhra Pradesh' },
+  { pincode: '513255', label: 'Rayadurg, Andhra Pradesh' },
+];
+
+function getAllowedPincodes() {
+  try {
+    const rows = queryAll('SELECT pincode, label FROM service_pincodes WHERE active = 1 ORDER BY pincode');
+    if (rows.length) return rows;
+  } catch {
+    // Table may not exist until migration runs
+  }
+  return DEFAULT_PINCODES;
+}
+
+function checkPincodeAvailability(pincode) {
+  const digits = (pincode ?? '').replace(/\D/g, '');
+  if (digits.length !== 6) {
+    return {
+      available: false,
+      message: 'Enter a valid 6-digit pincode',
+    };
+  }
+
+  const allowed = getAllowedPincodes();
+  const row = allowed.find((item) => item.pincode === digits);
+
+  if (row) {
+    return {
+      available: true,
+      pincode: digits,
+      label: row.label,
+    };
+  }
+
+  const pincodeList = allowed.map((item) => item.pincode).join(', ');
+
+  return {
+    available: false,
+    message: `We're currently unable to deliver to pincode ${digits}. We serve: ${pincodeList}`,
+    allowedPincodes: allowed.map((item) => ({
+      pincode: item.pincode,
+      label: item.label,
+    })),
+  };
+}
+
+router.get('/check-pincode', (req, res) => {
+  const { pincode } = req.query;
+  if (!pincode) {
+    return res.status(400).json({ error: 'Pincode is required' });
+  }
+  res.json(checkPincodeAvailability(String(pincode)));
+});
+
+router.get('/pincodes', (_req, res) => {
+  const pincodes = queryAll('SELECT pincode, label, active FROM service_pincodes ORDER BY pincode');
+  res.json({
+    pincodes: pincodes.map((row) => ({
+      pincode: row.pincode,
+      label: row.label,
+      active: !!row.active,
+    })),
+  });
+});
+
 router.get('/check', (req, res) => {
+  const { pincode } = req.query;
+  if (pincode) {
+    return res.json(checkPincodeAvailability(String(pincode)));
+  }
+
   const lat = Number(req.query.lat);
   const lng = Number(req.query.lng);
 
   if (Number.isNaN(lat) || Number.isNaN(lng)) {
-    return res.status(400).json({ error: 'Latitude and longitude are required' });
+    return res.status(400).json({ error: 'Pincode or latitude and longitude are required' });
   }
 
   res.json(checkAvailability(lat, lng));

@@ -3,6 +3,8 @@ export type Category = {
   name: string;
   icon: string;
   color: string;
+  thumbnail?: string;
+  description?: string;
 };
 
 export type Product = {
@@ -14,6 +16,7 @@ export type Product = {
   mrp?: number;
   unit: string;
   image: string;
+  description?: string;
   subscription?: boolean;
   tag?: string;
   stock: number;

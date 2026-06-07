@@ -4,6 +4,7 @@ export type PaymentConfig = {
   provider: string;
   keyId: string;
   configured: boolean;
+  demoMode?: boolean;
   currency: string;
   methods: string[];
 };
@@ -13,7 +14,7 @@ export type CreatePaymentOrderPayload = {
   deliverySlot: string;
   total: number;
   deliveryFee: number;
-  paymentMethod: 'razorpay' | 'wallet';
+  paymentMethod: 'razorpay' | 'wallet' | 'cod';
 };
 
 export type RazorpayCheckoutData = {
@@ -30,8 +31,11 @@ export function getPaymentConfig(token: string) {
   return apiRequest<PaymentConfig>('/payments/config', { token });
 }
 
+export type WalletOrderResult = { paymentMethod: 'wallet'; order: unknown };
+export type CodOrderResult = { paymentMethod: 'cod'; order: unknown };
+
 export function createPaymentOrder(token: string, payload: CreatePaymentOrderPayload) {
-  return apiRequest<RazorpayCheckoutData | { paymentMethod: 'wallet'; order: unknown }>(
+  return apiRequest<RazorpayCheckoutData | WalletOrderResult | CodOrderResult>(
     '/payments/create-order',
     { method: 'POST', token, body: payload }
   );

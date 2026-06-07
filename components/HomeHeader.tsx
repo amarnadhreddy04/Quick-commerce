@@ -5,12 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/Colors';
 import { spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { useDeliveryArea } from '@/context/DeliveryAreaContext';
+import { useDeliveryAreaOptional } from '@/context/DeliveryAreaContext';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function HomeHeader() {
   const { user } = useAuth();
-  const { areaName } = useDeliveryArea();
+  const areaName = useDeliveryAreaOptional()?.areaName;
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];

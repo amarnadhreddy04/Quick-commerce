@@ -3,6 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import initSqlJs from 'sql.js';
 
+import { BANNER_IMAGES, CATEGORY_IMAGES, PRODUCT_IMAGES, isImageUri } from './mediaUrls.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, '..', '..', '..');
 const dataDir = process.env.DB_DIR || path.join(projectRoot, 'server', 'data');
@@ -34,7 +36,8 @@ const SCHEMA = `
     name TEXT NOT NULL,
     icon TEXT,
     color TEXT,
-    thumbnail TEXT
+    thumbnail TEXT,
+    description TEXT
   );
 
   CREATE TABLE IF NOT EXISTS sub_categories (
@@ -53,6 +56,7 @@ const SCHEMA = `
     mrp REAL,
     unit TEXT,
     image TEXT,
+    description TEXT,
     subscription INTEGER NOT NULL DEFAULT 0,
     tag TEXT,
     stock INTEGER NOT NULL DEFAULT 0,
@@ -96,8 +100,8 @@ const SCHEMA = `
     id INTEGER PRIMARY KEY CHECK (id = 1),
     delivery_cutoff TEXT NOT NULL,
     delivery_slot TEXT NOT NULL,
-    min_order_value REAL NOT NULL DEFAULT 99,
-    delivery_fee REAL NOT NULL DEFAULT 15
+    min_order_value REAL NOT NULL DEFAULT 299,
+    delivery_fee REAL NOT NULL DEFAULT 30
   );
 
   CREATE TABLE IF NOT EXISTS service_areas (
@@ -106,6 +110,13 @@ const SCHEMA = `
     latitude REAL NOT NULL,
     longitude REAL NOT NULL,
     radius_km REAL NOT NULL DEFAULT 15,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS service_pincodes (
+    pincode TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -165,13 +176,84 @@ function migrateDatabase() {
     );
   `);
 
-  const areaCount = queryOne('SELECT COUNT(*) as count FROM service_areas').count;
-  if (areaCount === 0) {
-    getDb().run(
-      `INSERT INTO service_areas (id, name, latitude, longitude, radius_km, active)
-       VALUES ('addanki', 'Addanki', 15.8097, 79.9813, 15, 1)`
-    );
+  const userColumns = queryAll('PRAGMA table_info(users)');
+  const userColumnNames = new Set(userColumns.map((col) => col.name));
+  if (!userColumnNames.has('pincode')) {
+    getDb().run('ALTER TABLE users ADD COLUMN pincode TEXT');
   }
+
+  getDb().exec(`
+    CREATE TABLE IF NOT EXISTS service_pincodes (
+      pincode TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  const defaultPincodes = [
+    ['523201', 'Addanki, Andhra Pradesh'],
+    ['522601', 'Vinukonda, Andhra Pradesh'],
+    ['513255', 'Rayadurg, Andhra Pradesh'],
+  ];
+
+  defaultPincodes.forEach(([pincode, label]) => {
+    getDb().run(
+      `INSERT OR IGNORE INTO service_pincodes (pincode, label, active) VALUES (?, ?, 1)`,
+      [pincode, label]
+    );
+    getDb().run(
+      `UPDATE service_pincodes SET label = ?, active = 1 WHERE pincode = ?`,
+      [label, pincode]
+    );
+  });
+
+  getDb().run('UPDATE app_settings SET min_order_value = 299, delivery_fee = 30 WHERE id = 1');
+
+  getDb().run(
+    `UPDATE users SET pincode = '523201', location = 'Addanki, Andhra Pradesh'
+     WHERE email = 'amar@example.com' AND (pincode IS NULL OR pincode = '')`
+  );
+
+  const categoryColumns = queryAll('PRAGMA table_info(categories)');
+  const categoryColumnNames = new Set(categoryColumns.map((col) => col.name));
+  if (!categoryColumnNames.has('description')) {
+    getDb().run('ALTER TABLE categories ADD COLUMN description TEXT');
+  }
+
+  const productColumns = queryAll('PRAGMA table_info(products)');
+  const productColumnNames = new Set(productColumns.map((col) => col.name));
+  if (!productColumnNames.has('description')) {
+    getDb().run('ALTER TABLE products ADD COLUMN description TEXT');
+  }
+
+  migrateCatalogImages();
+}
+
+function migrateCatalogImages() {
+  Object.entries(CATEGORY_IMAGES).forEach(([id, url]) => {
+    const row = queryOne('SELECT thumbnail FROM categories WHERE id = ?', [id]);
+    if (row && !isImageUri(row.thumbnail)) {
+      getDb().run('UPDATE categories SET thumbnail = ? WHERE id = ?', [url, id]);
+    }
+  });
+
+  Object.entries(PRODUCT_IMAGES).forEach(([id, url]) => {
+    const row = queryOne('SELECT image FROM products WHERE id = ?', [id]);
+    if (row && !isImageUri(row.image)) {
+      getDb().run('UPDATE products SET image = ? WHERE id = ?', [url, id]);
+    }
+  });
+
+  Object.entries(BANNER_IMAGES).forEach(([id, urls]) => {
+    const row = queryOne('SELECT emojis FROM promo_banners WHERE id = ?', [id]);
+    if (!row) return;
+    const current = JSON.parse(row.emojis || '[]');
+    const needsUpdate = current.length === 0 || current.some((item) => !isImageUri(item));
+    if (needsUpdate) {
+      getDb().run('UPDATE promo_banners SET emojis = ? WHERE id = ?', [JSON.stringify(urls), id]);
+    }
+  });
 }
 
 export function getDb() {

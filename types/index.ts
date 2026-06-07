@@ -4,6 +4,7 @@ export type Category = {
   icon: string;
   color: string;
   thumbnail: string;
+  description?: string;
 };
 
 export type SubCategory = {
@@ -33,6 +34,7 @@ export type Product = {
   mrp?: number;
   unit: string;
   image: string;
+  description?: string;
   subscription?: boolean;
   tag?: string;
 };

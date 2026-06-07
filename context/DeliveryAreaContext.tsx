@@ -1,4 +1,4 @@
-import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext,
   useCallback,
@@ -10,71 +10,102 @@ import {
   type ReactNode,
 } from 'react';
 
-import { checkDeliveryArea, fetchSyncState } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { checkDeliveryPincode, fetchSyncState } from '@/lib/api';
+import { checkPincodeLocally } from '@/lib/deliveryPincodes';
 
-type DeliveryStatus = 'loading' | 'available' | 'unavailable' | 'permission_denied';
+const PINCODE_KEY = 'milkbasket-pincode';
+
+type DeliveryStatus = 'loading' | 'available' | 'unavailable';
 
 type DeliveryAreaContextValue = {
   status: DeliveryStatus;
   message: string;
   areaName: string | null;
-  distanceKm: number | null;
+  pincode: string | null;
   recheck: () => Promise<void>;
 };
 
 const DeliveryAreaContext = createContext<DeliveryAreaContextValue | null>(null);
 
+function extractPincode(userPincode?: string | null, location?: string) {
+  if (userPincode?.replace(/\D/g, '').length === 6) {
+    return userPincode.replace(/\D/g, '');
+  }
+  const match = location?.match(/(\d{6})\s*$/);
+  return match?.[1] ?? null;
+}
+
 export function DeliveryAreaProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [status, setStatus] = useState<DeliveryStatus>('loading');
   const [message, setMessage] = useState('');
   const [areaName, setAreaName] = useState<string | null>(null);
-  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+  const [pincode, setPincode] = useState<string | null>(null);
   const syncRef = useRef(0);
 
   const recheck = useCallback(async () => {
-    setStatus('loading');
-
-    const permission = await Location.requestForegroundPermissionsAsync();
-    if (!permission.granted) {
-      setStatus('permission_denied');
-      setMessage('Location permission is required to check delivery availability in your area.');
+    if (!user) {
+      setStatus('available');
+      setMessage('');
       setAreaName(null);
-      setDistanceKm(null);
+      setPincode(null);
       return;
     }
 
-    const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
+    setStatus('loading');
 
-    const result = await checkDeliveryArea(
-      position.coords.latitude,
-      position.coords.longitude
-    );
+    let userPincode = extractPincode(user?.pincode, user?.location);
+    if (!userPincode) {
+      userPincode = (await AsyncStorage.getItem(PINCODE_KEY))?.replace(/\D/g, '') ?? null;
+    }
 
-    if (result.available && result.area) {
+    if (!userPincode || userPincode.length !== 6) {
+      setStatus('unavailable');
+      setPincode(null);
+      setAreaName(null);
+      setMessage('Delivery pincode not found. Please register with pincode 523201, 522601, or 513255.');
+      return;
+    }
+
+    let result = checkPincodeLocally(userPincode);
+    try {
+      result = await checkDeliveryPincode(userPincode);
+    } catch {
+      result = checkPincodeLocally(userPincode);
+    }
+
+    if (result.available) {
       setStatus('available');
-      setAreaName(result.area.name);
-      setDistanceKm(result.area.distanceKm);
+      setPincode(userPincode);
+      setAreaName(result.label ?? userPincode);
       setMessage('');
       return;
     }
 
     setStatus('unavailable');
-    setAreaName(result.nearestArea?.name ?? null);
-    setDistanceKm(result.nearestArea?.distanceKm ?? null);
+    setPincode(userPincode);
+    setAreaName(result.label ?? null);
     setMessage(
       result.message ??
-        "We're currently unable to deliver to your location. Please try again from a serviceable area."
+        "We're currently unable to deliver to your location. We serve pincodes 523201, 522601, and 513255."
     );
-  }, []);
+  }, [user, user?.pincode, user?.location]);
 
   useEffect(() => {
+    if (!user) {
+      setStatus('loading');
+      setMessage('');
+      setAreaName(null);
+      setPincode(null);
+      return;
+    }
+
     recheck().catch(() => {
       setStatus('unavailable');
-      setMessage('Could not verify your delivery location. Please try again.');
+      setMessage('Could not verify your delivery pincode. Please try again.');
     });
-  }, [recheck]);
+  }, [user, recheck]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -97,10 +128,10 @@ export function DeliveryAreaProvider({ children }: { children: ReactNode }) {
       status,
       message,
       areaName,
-      distanceKm,
+      pincode,
       recheck,
     }),
-    [status, message, areaName, distanceKm, recheck]
+    [status, message, areaName, pincode, recheck]
   );
 
   return <DeliveryAreaContext.Provider value={value}>{children}</DeliveryAreaContext.Provider>;
@@ -112,4 +143,8 @@ export function useDeliveryArea() {
     throw new Error('useDeliveryArea must be used within DeliveryAreaProvider');
   }
   return context;
+}
+
+export function useDeliveryAreaOptional() {
+  return useContext(DeliveryAreaContext);
 }

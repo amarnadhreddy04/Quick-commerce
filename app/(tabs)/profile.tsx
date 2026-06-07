@@ -4,10 +4,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useSignOut } from '@/hooks/useSignOut';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const signOut = useSignOut();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -63,7 +65,7 @@ export default function ProfileScreen() {
       </View>
 
       <Pressable
-        onPress={logout}
+        onPress={() => signOut().catch(() => undefined)}
         style={[styles.logoutButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Ionicons name="log-out-outline" size={20} color="#EF4444" />
         <Text style={styles.logoutText}>Logout</Text>

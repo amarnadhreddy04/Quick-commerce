@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 
+import ImageUrlField from '../components/ImageUrlField';
 import PageHeader from '../components/PageHeader';
 import '../components/shared.css';
 import { useAdminStore } from '../store/AdminStore';
@@ -12,7 +13,8 @@ const emptyProduct = {
   price: 0,
   mrp: 0,
   unit: '',
-  image: '📦',
+  image: '',
+  description: '',
   stock: 0,
   active: true,
   subscription: false,
@@ -40,6 +42,7 @@ export default function Products() {
       mrp: product.mrp ?? 0,
       unit: product.unit,
       image: product.image,
+      description: product.description ?? '',
       stock: product.stock,
       active: product.active,
       subscription: product.subscription ?? false,
@@ -53,6 +56,8 @@ export default function Products() {
       ...form,
       mrp: form.mrp || undefined,
       subscription: form.subscription || undefined,
+      description: form.description.trim() || undefined,
+      image: form.image.trim(),
     };
 
     if (editing) {
@@ -70,7 +75,7 @@ export default function Products() {
     <div>
       <PageHeader
         title="Products"
-        subtitle="Manage catalog, pricing, and stock"
+        subtitle="Manage catalog, images, descriptions, pricing, and stock"
         action={
           <button type="button" className="btn btn-primary" onClick={openCreate}>
             + Add Product
@@ -95,9 +100,28 @@ export default function Products() {
               {products.map((product) => (
                 <tr key={product.id}>
                   <td>
-                    {product.image} {product.name}
+                    {product.image?.startsWith('http') ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 8,
+                          objectFit: 'cover',
+                          marginRight: 8,
+                          verticalAlign: 'middle',
+                        }}
+                      />
+                    ) : null}
+                    {product.name}
                     <br />
-                    <small>{product.brand} · {product.unit}</small>
+                    <small>
+                      {product.brand} · {product.unit}
+                    </small>
+                    {product.description ? (
+                      <span className="description-snippet">{product.description}</span>
+                    ) : null}
                   </td>
                   <td>{getCategoryName(product.categoryId)}</td>
                   <td>₹{product.price}</td>
@@ -195,11 +219,18 @@ export default function Products() {
                   required
                 />
               </label>
-              <label>
-                Emoji Icon
-                <input
-                  value={form.image}
-                  onChange={(e) => setForm({ ...form, image: e.target.value })}
+              <ImageUrlField
+                label="Product Image URL"
+                value={form.image}
+                onChange={(image) => setForm({ ...form, image })}
+              />
+              <label className="full">
+                Description
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Short product description for customers..."
+                  rows={3}
                 />
               </label>
               <label className="full">

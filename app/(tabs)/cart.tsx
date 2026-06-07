@@ -2,12 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import ProductImage from '@/components/ProductImage';
 import QuantityStepper from '@/components/QuantityStepper';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
 import { useCatalog } from '@/context/CatalogContext';
 import { useCart } from '@/context/CartContext';
 import { useColorScheme } from '@/components/useColorScheme';
+import { calculateOrderTotal, freeDeliveryMessage } from '@/lib/cartFees';
 
 export default function CartScreen() {
   const router = useRouter();
@@ -29,8 +31,8 @@ export default function CartScreen() {
     );
   }
 
-  const deliveryFee = subtotal >= settings.minOrderValue * 2 ? 0 : settings.deliveryFee;
-  const total = subtotal + deliveryFee;
+  const { deliveryFee, total } = calculateOrderTotal(subtotal);
+  const deliveryHint = freeDeliveryMessage(subtotal);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -47,7 +49,9 @@ export default function CartScreen() {
           <View
             key={item.product.id}
             style={[styles.itemCard, shadows.card, { backgroundColor: colors.card }]}>
-            <Text style={styles.emoji}>{item.product.image}</Text>
+            <View style={styles.itemImageWrap}>
+              <ProductImage product={item.product} style={styles.itemImage} emojiStyle={styles.emoji} />
+            </View>
             <View style={styles.itemInfo}>
               <Text style={[styles.itemBrand, { color: colors.textSecondary }]}>{item.product.brand}</Text>
               <Text style={[styles.itemName, { color: colors.text }]}>{item.product.name}</Text>
@@ -61,6 +65,13 @@ export default function CartScreen() {
             />
           </View>
         ))}
+
+        {deliveryHint ? (
+          <View style={[styles.deliveryBanner, { backgroundColor: colors.wallet, borderColor: colors.primary }]}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+            <Text style={[styles.deliveryHint, { color: colors.text }]}>{deliveryHint}</Text>
+          </View>
+        ) : null}
 
         <View style={[styles.summary, shadows.card, { backgroundColor: colors.card }]}>
           <SummaryRow label="Subtotal" value={`₹${subtotal}`} colors={colors} />
@@ -125,13 +136,31 @@ const styles = StyleSheet.create({
   slotLabel: { fontSize: 12 },
   slotValue: { fontSize: 14, fontWeight: '600' },
   itemCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, borderRadius: radius.lg, gap: spacing.md },
+  itemImageWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemImage: { width: '100%', height: '100%' },
   emoji: { fontSize: 36 },
   itemInfo: { flex: 1, gap: 2 },
   itemBrand: { fontSize: 11 },
   itemName: { fontSize: 15, fontWeight: '600' },
   itemUnit: { fontSize: 12 },
   itemPrice: { fontSize: 15, fontWeight: '700', marginTop: spacing.xs },
+  deliveryBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
   summary: { padding: spacing.lg, borderRadius: radius.lg, gap: spacing.sm },
+  deliveryHint: { flex: 1, fontSize: 14, lineHeight: 20, fontWeight: '500' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   summaryLabel: { fontSize: 14 },
   summaryValue: { fontSize: 14, fontWeight: '600' },

@@ -127,6 +127,9 @@ export default function Settings() {
 
       <form className="card" style={{ padding: 24, maxWidth: 560, marginBottom: 24 }} onSubmit={handleSubmit}>
         <h3 style={{ marginTop: 0 }}>Delivery Rules</h3>
+        <p style={{ color: '#64748b', marginTop: 0 }}>
+          Orders below the minimum order value are charged the delivery fee. Orders at or above the minimum get free delivery.
+        </p>
         <div className="form-grid">
           <label className="full">
             Order Cutoff Time

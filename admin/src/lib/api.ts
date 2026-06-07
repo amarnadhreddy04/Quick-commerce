@@ -51,6 +51,8 @@ export const api = {
     request(`/catalog/products/${id}`, { method: 'DELETE' }),
   createCategory: (category: unknown) =>
     request('/catalog/categories', { method: 'POST', body: JSON.stringify(category) }),
+  updateCategory: (id: string, category: unknown) =>
+    request(`/catalog/categories/${id}`, { method: 'PUT', body: JSON.stringify(category) }),
   deleteCategory: (id: string) =>
     request(`/catalog/categories/${id}`, { method: 'DELETE' }),
   getOrders: () => request<{ orders: unknown[] }>('/orders'),

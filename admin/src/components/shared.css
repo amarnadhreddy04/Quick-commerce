@@ -167,11 +167,45 @@ th {
 }
 
 .form-grid input,
-.form-grid select {
+.form-grid select,
+.form-grid textarea {
   padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
   font-size: 14px;
+  font-family: inherit;
+}
+
+.form-grid textarea {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.image-url-field .image-preview-wrap {
+  margin-top: 4px;
+}
+
+.image-preview {
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.description-snippet {
+  display: block;
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 280px;
 }
 
 .form-grid .full {
@@ -192,7 +226,9 @@ th {
 .modal {
   background: #fff;
   border-radius: 16px;
-  width: min(560px, 100%);
+  width: min(640px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
   padding: 24px;
 }
 

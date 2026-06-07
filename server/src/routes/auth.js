@@ -41,16 +41,19 @@ router.post('/register', async (req, res) => {
   const user = queryOne('SELECT * FROM users WHERE id = ?', [id]);
   const token = signToken(user);
 
-  const notifications = await sendRegistrationNotifications({ name, email, phone });
+  const notificationsPromise = sendRegistrationNotifications({ name, email, phone });
+  notificationsPromise.catch((error) => {
+    console.warn('[auth] Registration notifications failed:', error.message);
+  });
 
   res.status(201).json({
     token,
     user: formatUser(user),
     notifications: {
-      emailSent: !!notifications.email?.success,
-      smsSent: !!notifications.sms?.success && !notifications.sms?.devMode,
-      emailPreviewUrl: notifications.email?.previewUrl ?? null,
-      smsDevMode: !!notifications.sms?.devMode,
+      emailSent: false,
+      smsSent: false,
+      emailPreviewUrl: null,
+      smsDevMode: true,
     },
   });
 });

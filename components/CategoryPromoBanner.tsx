@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import AppImage from '@/components/AppImage';
 import { radius, spacing } from '@/constants/theme';
 import { PromoBanner } from '@/types';
 
@@ -27,11 +28,15 @@ export default function CategoryPromoBanner({ banner }: Props) {
             </View>
 
             <View style={styles.productImages}>
-              {banner.emojis.map((emoji, index) => (
+              {banner.emojis.map((imageUri, index) => (
                 <View
                   key={`${banner.id}-${index}`}
                   style={[styles.productBubble, index > 0 && styles.productBubbleOverlap]}>
-                  <Text style={styles.productEmoji}>{emoji}</Text>
+                  <AppImage
+                    uri={imageUri}
+                    style={styles.productImage}
+                    emojiStyle={styles.productEmoji}
+                  />
                 </View>
               ))}
             </View>
@@ -131,6 +136,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -139,6 +145,10 @@ const styles = StyleSheet.create({
   },
   productBubbleOverlap: {
     marginLeft: -12,
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
   productEmoji: {
     fontSize: 32,

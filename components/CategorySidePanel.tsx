@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import CategoryImage from '@/components/CategoryImage';
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -36,7 +37,11 @@ export default function CategorySidePanel({ selectedId, onSelect }: Props) {
                   },
                   isSelected && styles.thumbnailSelected,
                 ]}>
-                <Text style={styles.thumbnailEmoji}>{category.thumbnail}</Text>
+                <CategoryImage
+                  category={category}
+                  style={styles.thumbnailImage}
+                  emojiStyle={styles.thumbnailEmoji}
+                />
               </View>
               <Text
                 style={[
@@ -81,6 +86,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
+    overflow: 'hidden',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
   },
   thumbnailSelected: {
     transform: [{ scale: 1.05 }],

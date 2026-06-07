@@ -34,6 +34,7 @@ type AdminStoreValue = {
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   updateSettings: (settings: AppSettings) => Promise<void>;
@@ -45,8 +46,8 @@ const AdminContext = createContext<AdminStoreValue | null>(null);
 const defaultSettings: AppSettings = {
   deliveryCutoff: '11:00 PM',
   deliverySlot: 'Tomorrow, 6:00 AM – 8:00 AM',
-  minOrderValue: 99,
-  deliveryFee: 15,
+  minOrderValue: 299,
+  deliveryFee: 30,
 };
 
 export function AdminProvider({ children }: { children: ReactNode }) {
@@ -143,6 +144,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       },
       addCategory: async (category) => {
         await api.createCategory(category);
+        await refreshAll();
+      },
+      updateCategory: async (id, updates) => {
+        await api.updateCategory(id, updates);
         await refreshAll();
       },
       deleteCategory: async (id) => {

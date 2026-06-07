@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { queryAll, queryOne, run } from '../../../shared/src/db.js';
-import { adminRequired, authRequired, formatProduct } from '../../../shared/src/middleware/auth.js';
+import { adminRequired, authRequired, formatCategory, formatProduct } from '../../../shared/src/middleware/auth.js';
 import { publishSyncEvent } from '../../../shared/src/sync/publish.js';
 
 const router = Router();
@@ -9,26 +9,41 @@ const router = Router();
 router.get('/categories', (_req, res) => {
   const categories = queryAll('SELECT * FROM categories ORDER BY name');
   res.json({
-    categories: categories.map((c) => ({
-      id: c.id,
-      name: c.name,
-      icon: c.icon,
-      color: c.color,
-      thumbnail: c.thumbnail,
-    })),
+    categories: categories.map(formatCategory),
   });
 });
 
 router.post('/categories', authRequired, adminRequired, async (req, res) => {
-  const { name, icon, color, thumbnail } = req.body;
+  const { name, icon, color, thumbnail, description } = req.body;
   const id = req.body.id || name.toLowerCase().replace(/\s+/g, '-');
   run(
-    'INSERT INTO categories (id, name, icon, color, thumbnail) VALUES (?, ?, ?, ?, ?)',
-    [id, name, icon ?? 'grid', color ?? '#E8F5EE', thumbnail ?? '📦']
+    'INSERT INTO categories (id, name, icon, color, thumbnail, description) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, name, icon ?? 'grid', color ?? '#E8F5EE', thumbnail ?? '', description ?? '']
   );
   const category = queryOne('SELECT * FROM categories WHERE id = ?', [id]);
   await publishSyncEvent({ domain: 'catalog', action: 'created', entity: 'category', id });
-  res.status(201).json({ category });
+  res.status(201).json({ category: formatCategory(category) });
+});
+
+router.put('/categories/:id', authRequired, adminRequired, async (req, res) => {
+  const existing = queryOne('SELECT * FROM categories WHERE id = ?', [req.params.id]);
+  if (!existing) return res.status(404).json({ error: 'Category not found' });
+
+  const category = { ...formatCategory(existing), ...req.body };
+  run(
+    'UPDATE categories SET name=?, icon=?, color=?, thumbnail=?, description=? WHERE id=?',
+    [
+      category.name,
+      category.icon ?? 'grid',
+      category.color ?? '#E8F5EE',
+      category.thumbnail ?? '',
+      category.description ?? '',
+      req.params.id,
+    ]
+  );
+  const updated = queryOne('SELECT * FROM categories WHERE id = ?', [req.params.id]);
+  await publishSyncEvent({ domain: 'catalog', action: 'updated', entity: 'category', id: req.params.id });
+  res.json({ category: formatCategory(updated) });
 });
 
 router.delete('/categories/:id', authRequired, adminRequired, async (req, res) => {
@@ -95,8 +110,8 @@ router.post('/products', authRequired, adminRequired, async (req, res) => {
   const p = req.body;
   const id = p.id || `p${Date.now()}`;
   run(
-    `INSERT INTO products (id, name, brand, category_id, sub_category_id, price, mrp, unit, image, subscription, tag, stock, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO products (id, name, brand, category_id, sub_category_id, price, mrp, unit, image, description, subscription, tag, stock, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       p.name,
@@ -106,7 +121,8 @@ router.post('/products', authRequired, adminRequired, async (req, res) => {
       p.price,
       p.mrp ?? null,
       p.unit,
-      p.image ?? '📦',
+      p.image ?? '',
+      p.description ?? '',
       p.subscription ? 1 : 0,
       p.tag ?? null,
       p.stock ?? 0,
@@ -124,7 +140,7 @@ router.put('/products/:id', authRequired, adminRequired, async (req, res) => {
 
   const p = { ...formatProduct(existing), ...req.body };
   run(
-    `UPDATE products SET name=?, brand=?, category_id=?, sub_category_id=?, price=?, mrp=?, unit=?, image=?, subscription=?, tag=?, stock=?, active=?
+    `UPDATE products SET name=?, brand=?, category_id=?, sub_category_id=?, price=?, mrp=?, unit=?, image=?, description=?, subscription=?, tag=?, stock=?, active=?
      WHERE id=?`,
     [
       p.name,
@@ -135,6 +151,7 @@ router.put('/products/:id', authRequired, adminRequired, async (req, res) => {
       p.mrp ?? null,
       p.unit,
       p.image,
+      p.description ?? '',
       p.subscription ? 1 : 0,
       p.tag ?? null,
       p.stock ?? 0,

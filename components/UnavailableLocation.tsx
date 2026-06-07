@@ -5,31 +5,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
 import { useDeliveryArea } from '@/context/DeliveryAreaContext';
+import { useSignOut } from '@/hooks/useSignOut';
 import { useColorScheme } from '@/components/useColorScheme';
 
 type Props = {
-  mode: 'unavailable' | 'permission_denied' | 'loading';
+  mode: 'unavailable' | 'loading';
 };
 
 export default function UnavailableLocation({ mode }: Props) {
   const insets = useSafeAreaInsets();
-  const { message, areaName, distanceKm, recheck } = useDeliveryArea();
+  const signOut = useSignOut();
+  const { message, areaName, pincode, recheck } = useDeliveryArea();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  const title =
-    mode === 'loading'
-      ? 'Checking delivery availability'
-      : mode === 'permission_denied'
-        ? 'Location access needed'
-        : 'Delivery unavailable';
+  const title = mode === 'loading' ? 'Checking delivery availability' : 'Delivery unavailable';
 
   const subtitle =
     mode === 'loading'
-      ? 'Please wait while we verify if we deliver to your area.'
-      : mode === 'permission_denied'
-        ? message
-        : message;
+      ? 'Please wait while we verify if we deliver to your pincode.'
+      : message;
 
   return (
     <View
@@ -46,30 +41,36 @@ export default function UnavailableLocation({ mode }: Props) {
           <ActivityIndicator size="large" color={colors.primary} />
         ) : (
           <View style={[styles.iconWrap, { backgroundColor: colors.wallet }]}>
-            <Ionicons
-              name={mode === 'permission_denied' ? 'location-outline' : 'map-outline'}
-              size={42}
-              color={colors.primary}
-            />
+            <Ionicons name="map-outline" size={42} color={colors.primary} />
           </View>
         )}
 
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
 
-        {mode === 'unavailable' && areaName ? (
+        {mode === 'unavailable' && pincode ? (
           <Text style={[styles.meta, { color: colors.textSecondary }]}>
-            Nearest service area: {areaName}
-            {distanceKm != null ? ` (${distanceKm} km away)` : ''}
+            Your pincode: {pincode}
+            {areaName ? ` · ${areaName}` : ''}
+          </Text>
+        ) : null}
+        {mode === 'unavailable' ? (
+          <Text style={[styles.meta, { color: colors.textSecondary }]}>
+            We currently deliver to pincodes: 523201, 522601, 513255
           </Text>
         ) : null}
 
         {mode !== 'loading' ? (
-          <Pressable
-            onPress={() => recheck().catch(() => undefined)}
-            style={[styles.button, { backgroundColor: colors.primary }]}>
-            <Text style={styles.buttonText}>Check Again</Text>
-          </Pressable>
+          <>
+            <Pressable
+              onPress={() => recheck().catch(() => undefined)}
+              style={[styles.button, { backgroundColor: colors.primary }]}>
+              <Text style={styles.buttonText}>Check Again</Text>
+            </Pressable>
+            <Pressable onPress={() => signOut().catch(() => undefined)} style={styles.secondaryButton}>
+              <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Logout & try another account</Text>
+            </Pressable>
+          </>
         ) : null}
       </View>
     </View>
@@ -120,5 +121,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
+  },
+  secondaryButton: {
+    paddingVertical: spacing.sm,
+  },
+  secondaryButtonText: {
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

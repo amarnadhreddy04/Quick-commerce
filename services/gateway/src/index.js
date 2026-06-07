@@ -18,6 +18,11 @@ const routes = [
   { path: '/api/areas', target: process.env.SETTINGS_SERVICE_URL || 'http://127.0.0.1:3016' },
 ];
 
+function resolveTarget(pathname) {
+  const match = routes.find((route) => pathname.startsWith(route.path));
+  return match?.target ?? null;
+}
+
 app.get('/api/health', async (_req, res) => {
   const checks = await Promise.all(
     [
@@ -79,16 +84,14 @@ app.get('/api/sync/events', (req, res) => {
   });
 });
 
-routes.forEach(({ path, target }) => {
-  app.use(
-    path,
-    createProxyMiddleware({
-      target,
-      changeOrigin: true,
-      pathRewrite: (requestPath) => `${path}${requestPath}`,
-    })
-  );
-});
+app.use(
+  createProxyMiddleware({
+    target: routes[0].target,
+    changeOrigin: true,
+    pathFilter: (pathname) => pathname.startsWith('/api/'),
+    router: (req) => resolveTarget(req.url) ?? routes[0].target,
+  })
+);
 
 app.listen(PORT, () => {
   console.log(`API Gateway running at http://localhost:${PORT}`);

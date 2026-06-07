@@ -95,8 +95,8 @@ const SCHEMA = `
     id INTEGER PRIMARY KEY CHECK (id = 1),
     delivery_cutoff TEXT NOT NULL,
     delivery_slot TEXT NOT NULL,
-    min_order_value REAL NOT NULL DEFAULT 99,
-    delivery_fee REAL NOT NULL DEFAULT 15
+    min_order_value REAL NOT NULL DEFAULT 299,
+    delivery_fee REAL NOT NULL DEFAULT 30
   );
 `;
 

@@ -1,11 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import Colors from '@/constants/Colors';
-import { categoryIconMap } from '@/constants/categoryIcons';
-import { radius, spacing } from '@/constants/theme';
+import CategoryImage from '@/components/CategoryImage';
 import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
+import { radius, spacing } from '@/constants/theme';
 import { useCatalog } from '@/context/CatalogContext';
 
 export default function CategoryGrid() {
@@ -29,10 +28,10 @@ export default function CategoryGrid() {
           style={styles.item}
           onPress={() => openCategory(category.id)}>
           <View style={[styles.iconWrap, { backgroundColor: category.color }]}>
-            <Ionicons
-              name={categoryIconMap[category.icon] ?? 'grid-outline'}
-              size={24}
-              color={colors.primary}
+            <CategoryImage
+              category={category}
+              style={styles.categoryImage}
+              emojiStyle={styles.categoryEmoji}
             />
           </View>
           <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
@@ -62,6 +61,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  categoryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  categoryEmoji: {
+    fontSize: 28,
   },
   name: {
     fontSize: 11,

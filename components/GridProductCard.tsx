@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import ProductImage from '@/components/ProductImage';
 import QuantityStepper from '@/components/QuantityStepper';
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
@@ -27,7 +28,7 @@ export default function GridProductCard({ product }: Props) {
       ) : null}
 
       <View style={[styles.imageWrap, { backgroundColor: colors.background }]}>
-        <Text style={styles.emoji}>{product.image}</Text>
+        <ProductImage product={product} style={styles.productImage} emojiStyle={styles.emoji} />
       </View>
 
       <Text style={[styles.brand, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -91,6 +92,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
     marginTop: spacing.sm,
+    overflow: 'hidden',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
   emoji: {
     fontSize: 48,

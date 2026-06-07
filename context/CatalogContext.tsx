@@ -39,8 +39,8 @@ type CatalogContextValue = {
 const defaultSettings: AppSettings = {
   deliveryCutoff: '11:00 PM',
   deliverySlot: 'Tomorrow, 6:00 AM – 8:00 AM',
-  minOrderValue: 99,
-  deliveryFee: 15,
+  minOrderValue: 299,
+  deliveryFee: 30,
 };
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);

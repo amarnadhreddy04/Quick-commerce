@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import ProductImage from '@/components/ProductImage';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -37,7 +38,9 @@ export default function OrdersScreen() {
           <View
             key={product.id}
             style={[styles.subCard, shadows.card, { backgroundColor: colors.card }]}>
-            <Text style={styles.emoji}>{product.image}</Text>
+            <View style={styles.subImageWrap}>
+              <ProductImage product={product} style={styles.subImage} emojiStyle={styles.emoji} />
+            </View>
             <View style={styles.subInfo}>
               <Text style={[styles.subName, { color: colors.text }]}>{product.name}</Text>
               <Text style={[styles.subMeta, { color: colors.textSecondary }]}>
@@ -117,6 +120,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     gap: spacing.md,
   },
+  subImageWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subImage: { width: '100%', height: '100%' },
   emoji: {
     fontSize: 32,
   },
