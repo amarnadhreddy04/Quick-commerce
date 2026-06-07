@@ -1,0 +1,173 @@
+import { Category, Order, Product } from '@/types';
+
+export const deliveryCutoff = '11:00 PM';
+export const deliverySlot = 'Tomorrow, 6:00 AM – 8:00 AM';
+export const walletBalance = 248.5;
+export const userLocation = 'Sector 62, Noida';
+
+export const categories: Category[] = [
+  { id: 'milk', name: 'Milk', icon: 'water', color: '#DBEAFE' },
+  { id: 'bread', name: 'Bread', icon: 'restaurant', color: '#FEF3C7' },
+  { id: 'eggs', name: 'Eggs', icon: 'egg', color: '#FFEDD5' },
+  { id: 'fruits', name: 'Fruits', icon: 'leaf', color: '#DCFCE7' },
+  { id: 'vegetables', name: 'Vegetables', icon: 'nutrition', color: '#D1FAE5' },
+  { id: 'beverages', name: 'Beverages', icon: 'cafe', color: '#E0E7FF' },
+  { id: 'snacks', name: 'Snacks', icon: 'fast-food', color: '#FCE7F3' },
+  { id: 'breakfast', name: 'Breakfast', icon: 'sunny', color: '#FEF9C3' },
+];
+
+export const products: Product[] = [
+  {
+    id: 'p1',
+    name: 'Toned Milk',
+    brand: 'Amul',
+    categoryId: 'milk',
+    price: 28,
+    mrp: 30,
+    unit: '500 ml',
+    image: '🥛',
+    subscription: true,
+    tag: 'Daily Essential',
+  },
+  {
+    id: 'p2',
+    name: 'Full Cream Milk',
+    brand: 'Mother Dairy',
+    categoryId: 'milk',
+    price: 34,
+    mrp: 36,
+    unit: '500 ml',
+    image: '🥛',
+    subscription: true,
+  },
+  {
+    id: 'p3',
+    name: 'Brown Bread',
+    brand: 'Britannia',
+    categoryId: 'bread',
+    price: 45,
+    mrp: 50,
+    unit: '400 g',
+    image: '🍞',
+    tag: 'Fresh Today',
+  },
+  {
+    id: 'p4',
+    name: 'Multigrain Bread',
+    brand: 'Harvest Gold',
+    categoryId: 'bread',
+    price: 55,
+    unit: '400 g',
+    image: '🍞',
+  },
+  {
+    id: 'p5',
+    name: 'Farm Fresh Eggs',
+    brand: 'Eggoz',
+    categoryId: 'eggs',
+    price: 72,
+    mrp: 80,
+    unit: '6 pcs',
+    image: '🥚',
+    subscription: true,
+  },
+  {
+    id: 'p6',
+    name: 'Banana',
+    brand: 'Fresh',
+    categoryId: 'fruits',
+    price: 48,
+    unit: '6 pcs',
+    image: '🍌',
+  },
+  {
+    id: 'p7',
+    name: 'Apple Shimla',
+    brand: 'Fresh',
+    categoryId: 'fruits',
+    price: 120,
+    mrp: 140,
+    unit: '1 kg',
+    image: '🍎',
+    tag: '20% Off',
+  },
+  {
+    id: 'p8',
+    name: 'Tomato',
+    brand: 'Fresh',
+    categoryId: 'vegetables',
+    price: 32,
+    unit: '500 g',
+    image: '🍅',
+  },
+  {
+    id: 'p9',
+    name: 'Onion',
+    brand: 'Fresh',
+    categoryId: 'vegetables',
+    price: 28,
+    unit: '1 kg',
+    image: '🧅',
+  },
+  {
+    id: 'p10',
+    name: 'Orange Juice',
+    brand: 'Real',
+    categoryId: 'beverages',
+    price: 110,
+    unit: '1 L',
+    image: '🧃',
+  },
+  {
+    id: 'p11',
+    name: 'Masala Oats',
+    brand: 'Quaker',
+    categoryId: 'breakfast',
+    price: 165,
+    mrp: 185,
+    unit: '400 g',
+    image: '🥣',
+    tag: 'Healthy',
+  },
+  {
+    id: 'p12',
+    name: 'Potato Chips',
+    brand: 'Lays',
+    categoryId: 'snacks',
+    price: 20,
+    unit: '52 g',
+    image: '🥔',
+  },
+];
+
+export const orders: Order[] = [
+  {
+    id: 'MB-10482',
+    date: '7 Jun 2026',
+    status: 'scheduled',
+    items: 5,
+    total: 312,
+    deliverySlot: 'Tomorrow, 6:00 AM',
+  },
+  {
+    id: 'MB-10471',
+    date: '6 Jun 2026',
+    status: 'delivered',
+    items: 4,
+    total: 198,
+    deliverySlot: '6:00 AM – 8:00 AM',
+  },
+  {
+    id: 'MB-10460',
+    date: '5 Jun 2026',
+    status: 'delivered',
+    items: 6,
+    total: 425,
+    deliverySlot: '6:00 AM – 8:00 AM',
+  },
+];
+
+export const subscriptions = [
+  { productId: 'p1', frequency: 'Daily', nextDelivery: 'Tomorrow' },
+  { productId: 'p5', frequency: 'Every 2 days', nextDelivery: '8 Jun' },
+];
