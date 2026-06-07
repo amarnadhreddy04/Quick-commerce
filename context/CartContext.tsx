@@ -1,6 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
-import { products } from '@/data/mockData';
 import { CartItem, Product } from '@/types';
 
 type CartContextValue = {
@@ -17,10 +16,7 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([
-    { product: products[0], quantity: 1 },
-    { product: products[2], quantity: 1 },
-  ]);
+  const [items, setItems] = useState<CartItem[]>([]);
 
   const value = useMemo<CartContextValue>(() => {
     const addItem = (product: Product) => {

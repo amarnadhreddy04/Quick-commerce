@@ -4,11 +4,12 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import ProductCard from '@/components/ProductCard';
 import Colors from '@/constants/Colors';
 import { spacing } from '@/constants/theme';
-import { categories, products } from '@/data/mockData';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useCatalog } from '@/context/CatalogContext';
 
 export default function CategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { categories, products } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 

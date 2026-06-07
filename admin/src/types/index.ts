@@ -51,3 +51,13 @@ export type AppSettings = {
   minOrderValue: number;
   deliveryFee: number;
 };
+
+export type ServiceArea = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusKm: number;
+  active: boolean;
+  createdAt?: string;
+};

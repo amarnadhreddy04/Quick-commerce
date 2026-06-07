@@ -3,10 +3,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
-import { deliveryCutoff, deliverySlot } from '@/data/mockData';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useCatalog } from '@/context/CatalogContext';
 
 export default function DeliveryBanner() {
+  const { settings } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -14,9 +15,9 @@ export default function DeliveryBanner() {
     <View style={[styles.banner, { backgroundColor: colors.primary }]}>
       <View style={styles.row}>
         <Ionicons name="alarm-outline" size={20} color="#FFFFFF" />
-        <Text style={styles.title}>Order before {deliveryCutoff}</Text>
+        <Text style={styles.title}>Order before {settings.deliveryCutoff}</Text>
       </View>
-      <Text style={styles.subtitle}>Get delivery {deliverySlot.toLowerCase()}</Text>
+      <Text style={styles.subtitle}>Get delivery {settings.deliverySlot.toLowerCase()}</Text>
     </View>
   );
 }

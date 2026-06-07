@@ -4,10 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
 import { spacing } from '@/constants/theme';
-import { userLocation } from '@/data/mockData';
+import { useAuth } from '@/context/AuthContext';
+import { useDeliveryArea } from '@/context/DeliveryAreaContext';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function HomeHeader() {
+  const { user } = useAuth();
+  const { areaName } = useDeliveryArea();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -28,7 +31,7 @@ export default function HomeHeader() {
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
             <Text style={[styles.location, { color: colors.textSecondary }]}>
-              Delivering to {userLocation}
+              Delivering to {areaName ?? user?.location ?? 'your area'}
             </Text>
           </View>
         </View>

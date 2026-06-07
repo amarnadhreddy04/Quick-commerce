@@ -3,78 +3,91 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
-import { orders, subscriptions } from '@/data/mockData';
-import { products } from '@/data/mockData';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useCatalog } from '@/context/CatalogContext';
+import type { Order } from '@/types';
 
-const statusConfig = {
-  delivered: { label: 'Delivered', color: '#10B981', icon: 'checkmark-circle' as const },
-  scheduled: { label: 'Scheduled', color: '#F59E0B', icon: 'time' as const },
-  cancelled: { label: 'Cancelled', color: '#EF4444', icon: 'close-circle' as const },
+const statusConfig: Record<
+  Order['status'],
+  { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }
+> = {
+  delivered: { label: 'Delivered', color: '#10B981', icon: 'checkmark-circle' },
+  scheduled: { label: 'Scheduled', color: '#F59E0B', icon: 'time' },
+  cancelled: { label: 'Cancelled', color: '#EF4444', icon: 'close-circle' },
+  pending_payment: { label: 'Payment Pending', color: '#6366F1', icon: 'card' },
 };
 
 export default function OrdersScreen() {
+  const { orders, products } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const subscriptionProducts = products.filter((product) => product.subscription);
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Active Subscriptions</Text>
-      {subscriptions.map((sub) => {
-        const product = products.find((p) => p.id === sub.productId);
-        if (!product) return null;
-
-        return (
+      {subscriptionProducts.length === 0 ? (
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+          No active subscriptions yet.
+        </Text>
+      ) : (
+        subscriptionProducts.map((product) => (
           <View
-            key={sub.productId}
+            key={product.id}
             style={[styles.subCard, shadows.card, { backgroundColor: colors.card }]}>
             <Text style={styles.emoji}>{product.image}</Text>
             <View style={styles.subInfo}>
               <Text style={[styles.subName, { color: colors.text }]}>{product.name}</Text>
               <Text style={[styles.subMeta, { color: colors.textSecondary }]}>
-                {sub.frequency} · Next: {sub.nextDelivery}
+                Daily · Next: Tomorrow morning
               </Text>
             </View>
             <View style={[styles.subBadge, { backgroundColor: colors.wallet }]}>
               <Text style={[styles.subBadgeText, { color: colors.primary }]}>Active</Text>
             </View>
           </View>
-        );
-      })}
+        ))
+      )}
 
       <Text style={[styles.sectionTitle, { color: colors.text, marginTop: spacing.xl }]}>
         Order History
       </Text>
-      {orders.map((order) => {
-        const status = statusConfig[order.status];
-        return (
-          <View
-            key={order.id}
-            style={[styles.orderCard, shadows.card, { backgroundColor: colors.card }]}>
-            <View style={styles.orderHeader}>
-              <View>
-                <Text style={[styles.orderId, { color: colors.text }]}>{order.id}</Text>
-                <Text style={[styles.orderDate, { color: colors.textSecondary }]}>
-                  {order.date}
+      {orders.length === 0 ? (
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+          No orders yet. Add items to your basket to place an order.
+        </Text>
+      ) : (
+        orders.map((order) => {
+          const status = statusConfig[order.status] ?? statusConfig.scheduled;
+          return (
+            <View
+              key={order.id}
+              style={[styles.orderCard, shadows.card, { backgroundColor: colors.card }]}>
+              <View style={styles.orderHeader}>
+                <View>
+                  <Text style={[styles.orderId, { color: colors.text }]}>{order.id}</Text>
+                  <Text style={[styles.orderDate, { color: colors.textSecondary }]}>
+                    {order.date}
+                  </Text>
+                </View>
+                <View style={styles.statusRow}>
+                  <Ionicons name={status.icon} size={16} color={status.color} />
+                  <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+                </View>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.orderFooter}>
+                <Text style={[styles.orderMeta, { color: colors.textSecondary }]}>
+                  {order.items} items · {order.deliverySlot}
                 </Text>
-              </View>
-              <View style={styles.statusRow}>
-                <Ionicons name={status.icon} size={16} color={status.color} />
-                <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+                <Text style={[styles.orderTotal, { color: colors.text }]}>₹{order.total}</Text>
               </View>
             </View>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.orderFooter}>
-              <Text style={[styles.orderMeta, { color: colors.textSecondary }]}>
-                {order.items} items · {order.deliverySlot}
-              </Text>
-              <Text style={[styles.orderTotal, { color: colors.text }]}>₹{order.total}</Text>
-            </View>
-          </View>
-        );
-      })}
+          );
+        })
+      )}
     </ScrollView>
   );
 }
@@ -90,6 +103,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
+    marginBottom: spacing.md,
+  },
+  emptyText: {
+    fontSize: 14,
     marginBottom: spacing.md,
   },
   subCard: {

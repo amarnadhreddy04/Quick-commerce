@@ -9,11 +9,12 @@ import SectionHeader from '@/components/SectionHeader';
 import WalletBanner from '@/components/WalletBanner';
 import Colors from '@/constants/Colors';
 import { spacing } from '@/constants/theme';
-import { products } from '@/data/mockData';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useCatalog } from '@/context/CatalogContext';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { products } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 

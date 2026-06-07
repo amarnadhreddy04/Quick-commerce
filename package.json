@@ -9,6 +9,7 @@
     "expo-constants": "~56.0.17",
     "expo-font": "~56.0.5",
     "expo-linking": "~56.0.13",
+    "expo-location": "~19.0.8",
     "expo-router": "~56.2.9",
     "expo-splash-screen": "~56.0.10",
     "expo-status-bar": "~56.0.4",
@@ -35,8 +36,9 @@
     "web": "expo start --web",
     "admin": "npm run dev --prefix admin",
     "admin:build": "npm run build --prefix admin",
-    "server": "npm run dev --prefix server",
-    "server:seed": "npm run seed --prefix server"
+    "server": "npm run dev --prefix services",
+    "server:seed": "npm run seed --prefix services",
+    "server:legacy": "npm run dev --prefix server"
   },
   "private": true
 }

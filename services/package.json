@@ -1,0 +1,31 @@
+{
+  "name": "milkbasket-services",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/start-all.js",
+    "start": "node scripts/start-all.js",
+    "seed": "node shared/src/seed.js",
+    "gateway": "node gateway/src/index.js",
+    "auth": "node auth-service/src/index.js",
+    "catalog": "node catalog-service/src/index.js",
+    "orders": "node order-service/src/index.js",
+    "payments": "node payment-service/src/index.js",
+    "users": "node user-service/src/index.js",
+    "settings": "node settings-service/src/index.js",
+    "notifications": "node notification-service/src/index.js",
+    "sync": "node sync-service/src/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "http-proxy-middleware": "^3.0.5",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^7.0.3",
+    "sql.js": "^1.13.0",
+    "uuid": "^11.1.0"
+  }
+}

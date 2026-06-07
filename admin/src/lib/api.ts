@@ -62,4 +62,11 @@ export const api = {
   getSettings: () => request<{ settings: unknown }>('/settings'),
   updateSettings: (settings: unknown) =>
     request('/settings', { method: 'PUT', body: JSON.stringify(settings) }),
+  getServiceAreas: () => request<{ areas: unknown[] }>('/areas'),
+  createServiceArea: (area: unknown) =>
+    request('/areas', { method: 'POST', body: JSON.stringify(area) }),
+  updateServiceArea: (id: string, area: unknown) =>
+    request(`/areas/${id}`, { method: 'PUT', body: JSON.stringify(area) }),
+  deleteServiceArea: (id: string) =>
+    request(`/areas/${id}`, { method: 'DELETE' }),
 };

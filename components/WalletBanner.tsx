@@ -3,10 +3,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
-import { walletBalance } from '@/data/mockData';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function WalletBanner() {
+  const { user } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -16,7 +17,9 @@ export default function WalletBanner() {
         <Ionicons name="wallet-outline" size={22} color={colors.primary} />
         <View>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Wallet Balance</Text>
-          <Text style={[styles.balance, { color: colors.primary }]}>₹{walletBalance.toFixed(2)}</Text>
+          <Text style={[styles.balance, { color: colors.primary }]}>
+            ₹{(user?.walletBalance ?? 0).toFixed(2)}
+          </Text>
         </View>
       </View>
       <View style={[styles.chip, { backgroundColor: colors.card }]}>

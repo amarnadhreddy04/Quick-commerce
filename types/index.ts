@@ -45,7 +45,7 @@ export type CartItem = {
 export type Order = {
   id: string;
   date: string;
-  status: 'delivered' | 'scheduled' | 'cancelled';
+  status: 'delivered' | 'scheduled' | 'cancelled' | 'pending_payment';
   items: number;
   total: number;
   deliverySlot: string;

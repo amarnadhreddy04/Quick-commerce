@@ -5,11 +5,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Colors from '@/constants/Colors';
 import { categoryIconMap } from '@/constants/categoryIcons';
 import { radius, spacing } from '@/constants/theme';
-import { categories } from '@/data/mockData';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useCatalog } from '@/context/CatalogContext';
 
 export default function CategoryGrid() {
   const router = useRouter();
+  const { categories } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 

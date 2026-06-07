@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import type { Category, Order, Product, PromoBanner, SubCategory } from '@/types';
+
 const DEFAULT_URL =
   Platform.OS === 'android' ? 'http://10.0.2.2:3001/api' : 'http://localhost:3001/api';
 
@@ -13,6 +15,13 @@ export type ApiUser = {
   role: 'customer' | 'admin';
   location?: string;
   walletBalance: number;
+};
+
+export type AppSettings = {
+  deliveryCutoff: string;
+  deliverySlot: string;
+  minOrderValue: number;
+  deliveryFee: number;
 };
 
 type RequestOptions = {
@@ -77,4 +86,67 @@ export function registerRequest(payload: {
 
 export function meRequest(token: string) {
   return apiRequest<{ user: ApiUser }>('/auth/me', { token });
+}
+
+export function fetchCategories() {
+  return apiRequest<{ categories: Category[] }>('/catalog/categories');
+}
+
+export function fetchSubCategories(categoryId?: string) {
+  const query = categoryId ? `?categoryId=${categoryId}` : '';
+  return apiRequest<{ subCategories: SubCategory[] }>(`/catalog/sub-categories${query}`);
+}
+
+export function fetchBanners(categoryId?: string) {
+  const query = categoryId ? `?categoryId=${categoryId}` : '';
+  return apiRequest<{ banners: PromoBanner[] }>(`/catalog/banners${query}`);
+}
+
+export function fetchProducts(params?: { categoryId?: string; activeOnly?: boolean }) {
+  const search = new URLSearchParams();
+  if (params?.categoryId) search.set('categoryId', params.categoryId);
+  if (params?.activeOnly) search.set('activeOnly', 'true');
+  const query = search.toString() ? `?${search}` : '';
+  return apiRequest<{ products: Product[] }>(`/catalog/products${query}`);
+}
+
+export function fetchSettings() {
+  return apiRequest<{ settings: AppSettings }>('/settings');
+}
+
+export function fetchOrders(token: string) {
+  return apiRequest<{ orders: Order[] }>('/orders', { token });
+}
+
+export type SyncState = {
+  catalog: number;
+  orders: number;
+  settings: number;
+  users: number;
+  areas: number;
+};
+
+export type DeliveryCheck = {
+  available: boolean;
+  message?: string;
+  area?: {
+    id: string;
+    name: string;
+    radiusKm: number;
+    distanceKm: number;
+  };
+  nearestArea?: {
+    name: string;
+    radiusKm: number;
+    distanceKm: number;
+  };
+  areasConfigured?: boolean;
+};
+
+export function checkDeliveryArea(lat: number, lng: number) {
+  return apiRequest<DeliveryCheck>(`/areas/check?lat=${lat}&lng=${lng}`);
+}
+
+export function fetchSyncState() {
+  return apiRequest<{ state: SyncState }>('/sync/state');
 }

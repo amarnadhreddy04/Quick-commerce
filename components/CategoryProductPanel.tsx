@@ -6,8 +6,8 @@ import GridProductCard from '@/components/GridProductCard';
 import SubCategoryPills from '@/components/SubCategoryPills';
 import Colors from '@/constants/Colors';
 import { spacing } from '@/constants/theme';
-import { products, promoBanners, subCategories } from '@/data/mockData';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useCatalog } from '@/context/CatalogContext';
 import { Category } from '@/types';
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
 };
 
 export default function CategoryProductPanel({ category }: Props) {
+  const { products, subCategories, banners } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
@@ -23,14 +24,14 @@ export default function CategoryProductPanel({ category }: Props) {
     setSelectedSubCategory(null);
   }, [category.id]);
 
-  const banner = promoBanners.find((item) => item.categoryId === category.id);
+  const banner = banners.find((item) => item.categoryId === category.id);
   const categorySubCategories = subCategories.filter((item) => item.categoryId === category.id);
 
   const categoryProducts = useMemo(() => {
     const filtered = products.filter((product) => product.categoryId === category.id);
     if (!selectedSubCategory) return filtered;
     return filtered.filter((product) => product.subCategoryId === selectedSubCategory);
-  }, [category.id, selectedSubCategory]);
+  }, [category.id, selectedSubCategory, products]);
 
   return (
     <View style={[styles.panel, { backgroundColor: colors.background }]}>

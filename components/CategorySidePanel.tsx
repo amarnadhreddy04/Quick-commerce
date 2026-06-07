@@ -2,8 +2,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
-import { categories } from '@/data/mockData';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useCatalog } from '@/context/CatalogContext';
 import { Category } from '@/types';
 
 type Props = {
@@ -12,6 +12,7 @@ type Props = {
 };
 
 export default function CategorySidePanel({ selectedId, onSelect }: Props) {
+  const { categories } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 

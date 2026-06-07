@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { api, getAuthToken, setAuthToken } from '../lib/api';
+import { subscribeSyncEvents } from '../lib/sync';
 import type {
   AppSettings,
   Category,
@@ -91,6 +92,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }
     bootstrap();
   }, [refreshAll]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    return subscribeSyncEvents(() => {
+      refreshAll().catch(() => undefined);
+    });
+  }, [isAuthenticated, refreshAll]);
 
   const value = useMemo<AdminStoreValue>(
     () => ({
