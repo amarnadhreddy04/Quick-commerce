@@ -72,6 +72,12 @@ Open http://localhost:5173 and sign in with:
 
 The admin panel reads and writes data through the API server.
 
+### 4. Payments (Razorpay)
+
+The basket supports **Razorpay** (UPI/Card/Netbanking) and **Wallet** payments.
+
+Add Razorpay test keys to `server/.env` (see `server/.env.example`). Without keys, demo payment mode is used.
+
 ## Project Structure
 
 ```

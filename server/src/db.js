@@ -76,7 +76,11 @@ const SCHEMA = `
     status TEXT NOT NULL DEFAULT 'scheduled',
     total REAL NOT NULL,
     delivery_slot TEXT,
-    items_count INTEGER NOT NULL DEFAULT 0
+    items_count INTEGER NOT NULL DEFAULT 0,
+    payment_status TEXT DEFAULT 'pending',
+    payment_method TEXT,
+    razorpay_order_id TEXT,
+    razorpay_payment_id TEXT
   );
 
   CREATE TABLE IF NOT EXISTS order_items (
@@ -116,8 +120,27 @@ export async function initDatabase() {
 
   db.run('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  migrateDatabase();
   saveDatabase();
   return db;
+}
+
+function migrateDatabase() {
+  const columns = queryAll('PRAGMA table_info(orders)');
+  const names = new Set(columns.map((col) => col.name));
+
+  const additions = [
+    ['payment_status', "TEXT DEFAULT 'pending'"],
+    ['payment_method', 'TEXT'],
+    ['razorpay_order_id', 'TEXT'],
+    ['razorpay_payment_id', 'TEXT'],
+  ];
+
+  additions.forEach(([name, type]) => {
+    if (!names.has(name)) {
+      getDb().run(`ALTER TABLE orders ADD COLUMN ${name} ${type}`);
+    }
+  });
 }
 
 export function getDb() {

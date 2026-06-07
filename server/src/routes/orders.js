@@ -17,6 +17,8 @@ function formatOrder(row) {
     items: row.items_count,
     total: row.total,
     deliverySlot: row.delivery_slot,
+    paymentStatus: row.payment_status ?? 'pending',
+    paymentMethod: row.payment_method ?? null,
   };
 }
 

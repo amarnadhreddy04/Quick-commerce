@@ -20,7 +20,7 @@ export type Product = {
   active: boolean;
 };
 
-export type OrderStatus = 'delivered' | 'scheduled' | 'cancelled' | 'processing';
+export type OrderStatus = 'delivered' | 'scheduled' | 'cancelled' | 'processing' | 'pending_payment';
 
 export type Order = {
   id: string;
@@ -31,6 +31,8 @@ export type Order = {
   items: number;
   total: number;
   deliverySlot: string;
+  paymentStatus?: string;
+  paymentMethod?: string | null;
 };
 
 export type Customer = {

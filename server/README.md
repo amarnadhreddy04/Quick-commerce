@@ -54,6 +54,29 @@ On user signup, the API sends:
 
 Without `FAST2SMS_API_KEY`, SMS content is logged to the server console (dev mode).
 
+## Payment Gateway (Razorpay)
+
+Integrated payment flow:
+1. `POST /api/payments/create-order` — creates Razorpay order (or wallet payment)
+2. `POST /api/payments/verify` — verifies Razorpay signature after checkout
+3. `GET /api/payments/config` — returns Razorpay key ID for client
+
+### Setup Razorpay (Test Mode)
+
+1. Create account at [https://razorpay.com](https://razorpay.com)
+2. Dashboard → Settings → API Keys → Generate Test Keys
+3. Add to `server/.env`:
+   ```
+   RAZORPAY_KEY_ID=rzp_test_xxxxx
+   RAZORPAY_KEY_SECRET=your_secret
+   ```
+
+**Without keys:** app runs in demo mode — payments are simulated.
+
+**Payment methods in app:**
+- Razorpay (UPI, Cards, Netbanking)
+- Wallet balance
+
 ## API Endpoints
 
 - `POST /api/auth/register` — user registration
