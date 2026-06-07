@@ -14,6 +14,7 @@ import {
   loginRequest,
   meRequest,
   registerRequest,
+  type RegisterNotifications,
 } from '@/lib/api';
 
 const TOKEN_KEY = 'milkbasket-token';
@@ -26,10 +27,10 @@ type AuthContextValue = {
   register: (payload: {
     name: string;
     email: string;
-    phone?: string;
+    phone: string;
     password: string;
     location?: string;
-  }) => Promise<void>;
+  }) => Promise<RegisterNotifications>;
   logout: () => Promise<void>;
 };
 
@@ -78,8 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await persistSession(nextToken, nextUser);
       },
       register: async (payload) => {
-        const { token: nextToken, user: nextUser } = await registerRequest(payload);
+        const { token: nextToken, user: nextUser, notifications } = await registerRequest(payload);
         await persistSession(nextToken, nextUser);
+        return notifications;
       },
       logout: async () => {
         await AsyncStorage.removeItem(TOKEN_KEY);

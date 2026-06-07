@@ -4,18 +4,24 @@ import { v4 as uuid } from 'uuid';
 
 import { queryOne, run } from '../db.js';
 import { authRequired, formatUser, signToken } from '../middleware/auth.js';
+import { sendRegistrationNotifications } from '../services/notifications.js';
 
 const router = Router();
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { name, email, phone, password, location } = req.body;
 
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Name, email, and password are required' });
+  if (!name || !email || !password || !phone) {
+    return res.status(400).json({ error: 'Name, email, phone, and password are required' });
   }
 
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+
+  const phoneDigits = phone.replace(/\D/g, '');
+  if (phoneDigits.length < 10) {
+    return res.status(400).json({ error: 'Enter a valid 10-digit phone number' });
   }
 
   const existing = queryOne('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
@@ -29,12 +35,24 @@ router.post('/register', (req, res) => {
   run(
     `INSERT INTO users (id, name, email, phone, password_hash, role, location, wallet_balance, active)
      VALUES (?, ?, ?, ?, ?, 'customer', ?, 0, 1)`,
-    [id, name, email.toLowerCase(), phone ?? null, passwordHash, location ?? null]
+    [id, name, email.toLowerCase(), phone, passwordHash, location ?? null]
   );
 
   const user = queryOne('SELECT * FROM users WHERE id = ?', [id]);
   const token = signToken(user);
-  res.status(201).json({ token, user: formatUser(user) });
+
+  const notifications = await sendRegistrationNotifications({ name, email, phone });
+
+  res.status(201).json({
+    token,
+    user: formatUser(user),
+    notifications: {
+      emailSent: !!notifications.email?.success,
+      smsSent: !!notifications.sms?.success && !notifications.sms?.devMode,
+      emailPreviewUrl: notifications.email?.previewUrl ?? null,
+      smsDevMode: !!notifications.sms?.devMode,
+    },
+  });
 });
 
 router.post('/login', (req, res) => {

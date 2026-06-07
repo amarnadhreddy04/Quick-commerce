@@ -52,17 +52,27 @@ export function loginRequest(email: string, password: string) {
   });
 }
 
+export type RegisterNotifications = {
+  emailSent: boolean;
+  smsSent: boolean;
+  emailPreviewUrl?: string | null;
+  smsDevMode?: boolean;
+};
+
 export function registerRequest(payload: {
   name: string;
   email: string;
-  phone?: string;
+  phone: string;
   password: string;
   location?: string;
 }) {
-  return apiRequest<{ token: string; user: ApiUser }>('/auth/register', {
-    method: 'POST',
-    body: payload,
-  });
+  return apiRequest<{ token: string; user: ApiUser; notifications: RegisterNotifications }>(
+    '/auth/register',
+    {
+      method: 'POST',
+      body: payload,
+    }
+  );
 }
 
 export function meRequest(token: string) {

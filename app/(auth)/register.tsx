@@ -32,24 +32,36 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successNote, setSuccessNote] = useState('');
 
   const handleRegister = async () => {
     setError('');
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError('Name, email, and password are required');
+    setSuccessNote('');
+    if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
+      setError('Name, email, phone, and password are required');
       return;
     }
 
     setLoading(true);
     try {
-      await register({
+      const notifications = await register({
         name: name.trim(),
         email: email.trim(),
-        phone: phone.trim() || undefined,
+        phone: phone.trim(),
         location: location.trim() || undefined,
         password,
       });
-      router.replace('/(tabs)');
+
+      const notes = [];
+      if (notifications.emailSent) notes.push('Welcome email sent');
+      if (notifications.smsSent) notes.push('Welcome SMS sent');
+      if (notifications.smsDevMode) notes.push('SMS queued on server');
+      if (notes.length) {
+        setSuccessNote(notes.join(' · '));
+        setTimeout(() => router.replace('/(tabs)'), 1800);
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -96,6 +108,7 @@ export default function RegisterScreen() {
           ))}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
+          {successNote ? <Text style={[styles.success, { color: colors.primary }]}>{successNote}</Text> : null}
 
           <Pressable
             onPress={handleRegister}
@@ -142,6 +155,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   error: { color: '#EF4444', fontSize: 13, marginTop: spacing.sm },
+  success: { fontSize: 13, marginTop: spacing.sm, fontWeight: '600' },
   button: {
     marginTop: spacing.lg,
     paddingVertical: spacing.md,
