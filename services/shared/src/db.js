@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import initSqlJs from 'sql.js';
 
+import { ensureDemoOrder } from './ensureDemoOrder.js';
 import { ensureDemoUsers } from './ensureDemoUsers.js';
 import { migrateGroceryCategories } from './groceryCategories.js';
 import { BANNER_IMAGES, CATEGORY_IMAGES, PRODUCT_IMAGES, isImageUri } from './mediaUrls.js';
@@ -329,6 +330,7 @@ function migrateDatabase() {
   migrateLocationCatalog();
   migrateGroceryCategories({ queryOne, run, getDb, queryAll });
   ensureDemoUsers();
+  ensureDemoOrder();
 }
 
 function migrateUserAddresses() {

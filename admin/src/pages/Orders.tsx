@@ -107,7 +107,11 @@ export default function Orders() {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>No orders match the selected filters.</td>
+                  <td colSpan={9}>
+                    {orders.length === 0
+                      ? 'No orders yet. Place a test order from the app, or restart the server to restore the demo order.'
+                      : 'No orders match the selected filters. Try changing the period to All Time.'}
+                  </td>
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
