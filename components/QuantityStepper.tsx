@@ -10,6 +10,7 @@ type Props = {
   onIncrease: () => void;
   onDecrease: () => void;
   compact?: boolean;
+  disableIncrease?: boolean;
 };
 
 export default function QuantityStepper({
@@ -17,6 +18,7 @@ export default function QuantityStepper({
   onIncrease,
   onDecrease,
   compact = false,
+  disableIncrease = false,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -46,8 +48,11 @@ export default function QuantityStepper({
         <Ionicons name="remove" size={16} color={colors.primary} />
       </Pressable>
       <Text style={[styles.quantity, { color: colors.primary }]}>{quantity}</Text>
-      <Pressable onPress={onIncrease} style={styles.stepButton}>
-        <Ionicons name="add" size={16} color={colors.primary} />
+      <Pressable
+        onPress={onIncrease}
+        disabled={disableIncrease}
+        style={[styles.stepButton, disableIncrease && styles.stepButtonDisabled]}>
+        <Ionicons name="add" size={16} color={disableIncrease ? colors.textSecondary : colors.primary} />
       </Pressable>
     </View>
   );
@@ -84,6 +89,9 @@ const styles = StyleSheet.create({
   stepButton: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
+  },
+  stepButtonDisabled: {
+    opacity: 0.45,
   },
   quantity: {
     minWidth: 24,

@@ -143,6 +143,86 @@ export async function sendWelcomeSms({ name, phone }) {
   return { success: true, devMode: true, phone: formattedPhone, message };
 }
 
+export async function sendStockAvailableEmail({ name, email, productName }) {
+  const transport = await createMailTransport();
+  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@milkbasket.com>`;
+
+  const info = await transport.sendMail({
+    from,
+    to: email,
+    subject: `${productName} is back in stock — ${APP_NAME}`,
+    text: [
+      `Hi ${name},`,
+      '',
+      `Good news! ${productName} is back in stock on ${APP_NAME}.`,
+      'Order before 11 PM for tomorrow morning delivery.',
+      '',
+      `Team ${APP_NAME}`,
+    ].join('\n'),
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+        <h2 style="color:#1B8B4C;">Back in stock!</h2>
+        <p>Hi <strong>${name}</strong>,</p>
+        <p><strong>${productName}</strong> is available again on ${APP_NAME}. Order before 11 PM for tomorrow morning delivery.</p>
+        <p style="color:#666;">Team ${APP_NAME}</p>
+      </div>
+    `,
+  });
+
+  const preview = nodemailer.getTestMessageUrl(info);
+  if (preview) {
+    console.log('[Email] Stock notify preview URL:', preview);
+  }
+
+  return { success: true, previewUrl: preview ?? null };
+}
+
+export async function sendStockAvailableSms({ name, phone, productName }) {
+  const formattedPhone = formatPhone(phone);
+  if (!formattedPhone) {
+    return { success: false, skipped: true, reason: 'No phone number provided' };
+  }
+
+  const message = `Hi ${name}, ${productName} is back in stock on ${APP_NAME}. Order before 11 PM for tomorrow morning delivery.`;
+
+  if (process.env.FAST2SMS_API_KEY) {
+    const result = await sendSmsViaFast2SMS(formattedPhone, message);
+    console.log('[SMS] Stock notify sent via Fast2SMS to', formattedPhone);
+    return { success: true, ...result };
+  }
+
+  if (process.env.ENABLE_TEXTBELT_SMS === 'true') {
+    const result = await sendSmsViaTextBelt(formattedPhone, message);
+    console.log('[SMS] Stock notify sent via TextBelt to', formattedPhone);
+    return { success: true, ...result };
+  }
+
+  console.log('[SMS] Dev mode — stock notify not sent (configure FAST2SMS_API_KEY):');
+  console.log(`  To: ${formattedPhone}`);
+  console.log(`  Message: ${message}`);
+  return { success: true, devMode: true, phone: formattedPhone, message };
+}
+
+export async function sendStockAvailableNotifications({ name, email, phone, productName }) {
+  const results = { email: null, sms: null, errors: [] };
+
+  try {
+    results.email = await sendStockAvailableEmail({ name, email, productName });
+  } catch (error) {
+    results.errors.push({ channel: 'email', message: error.message });
+    console.error('[Email] Stock notify failed:', error.message);
+  }
+
+  try {
+    results.sms = await sendStockAvailableSms({ name, phone, productName });
+  } catch (error) {
+    results.errors.push({ channel: 'sms', message: error.message });
+    console.error('[SMS] Stock notify failed:', error.message);
+  }
+
+  return results;
+}
+
 export async function sendRegistrationNotifications({ name, email, phone }) {
   const results = { email: null, sms: null, errors: [] };
 

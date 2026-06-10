@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
+import { canIncreaseQuantity, getProductStock, isOutOfStock } from '@/lib/productStock';
 import { CartItem, Product } from '@/types';
 
 type CartContextValue = {
@@ -20,15 +21,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<CartContextValue>(() => {
     const addItem = (product: Product) => {
+      if (isOutOfStock(product)) return;
+
       setItems((current) => {
         const existing = current.find((item) => item.product.id === product.id);
         if (existing) {
+          if (!canIncreaseQuantity(product, existing.quantity)) return current;
           return current.map((item) =>
             item.product.id === product.id
               ? { ...item, quantity: item.quantity + 1 }
               : item
           );
         }
+        if (getProductStock(product) < 1) return current;
         return [...current, { product, quantity: 1 }];
       });
     };
@@ -42,10 +47,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeItem(productId);
         return;
       }
+
       setItems((current) =>
-        current.map((item) =>
-          item.product.id === productId ? { ...item, quantity } : item
-        )
+        current.map((item) => {
+          if (item.product.id !== productId) return item;
+          const maxQty = getProductStock(item.product);
+          return { ...item, quantity: Math.min(quantity, maxQty) };
+        })
       );
     };
 

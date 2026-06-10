@@ -48,6 +48,7 @@ const defaultSettings: AppSettings = {
   deliverySlot: 'Tomorrow, 6:00 AM – 8:00 AM',
   minOrderValue: 299,
   deliveryFee: 30,
+  walletEnabled: false,
 };
 
 export function AdminProvider({ children }: { children: ReactNode }) {

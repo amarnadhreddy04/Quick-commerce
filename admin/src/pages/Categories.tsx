@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 
 import ImageUrlField from '../components/ImageUrlField';
 import PageHeader from '../components/PageHeader';
+import PincodeAvailabilityField from '../components/PincodeAvailabilityField';
 import '../components/shared.css';
 import { useAdminStore } from '../store/AdminStore';
 import type { Category } from '../types';
@@ -12,6 +13,7 @@ const emptyCategory = {
   color: '#E8F5EE',
   thumbnail: '',
   description: '',
+  pincodes: [] as string[],
 };
 
 export default function Categories() {
@@ -34,6 +36,7 @@ export default function Categories() {
       color: category.color,
       thumbnail: category.thumbnail ?? '',
       description: category.description ?? '',
+      pincodes: category.pincodes ?? [],
     });
     setShowModal(true);
   };
@@ -44,6 +47,7 @@ export default function Categories() {
       ...form,
       thumbnail: form.thumbnail.trim(),
       description: form.description.trim() || undefined,
+      pincodes: form.pincodes,
     };
 
     if (editing) {
@@ -112,6 +116,17 @@ export default function Categories() {
             {category.description ? (
               <span className="description-snippet">{category.description}</span>
             ) : null}
+            <div style={{ marginTop: 8 }}>
+              {category.allLocations !== false && !category.pincodes?.length ? (
+                <span className="location-chip">All locations</span>
+              ) : (
+                category.pincodes?.map((pincode) => (
+                  <span key={`${category.id}-${pincode}`} className="location-chip">
+                    {pincode}
+                  </span>
+                ))
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -158,6 +173,10 @@ export default function Categories() {
                   rows={3}
                 />
               </label>
+              <PincodeAvailabilityField
+                selected={form.pincodes}
+                onChange={(pincodes) => setForm({ ...form, pincodes })}
+              />
             </div>
             <div className="modal-actions">
               <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>

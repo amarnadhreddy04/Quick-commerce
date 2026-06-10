@@ -1,11 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import ProductImage from '@/components/ProductImage';
-import QuantityStepper from '@/components/QuantityStepper';
+import ProductCartControls from '@/components/ProductCartControls';
+import ProductImageGallery from '@/components/ProductImageGallery';
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
-import { useCart } from '@/context/CartContext';
+import { useProductDetail } from '@/context/ProductDetailContext';
 import { useColorScheme } from '@/components/useColorScheme';
+import { isOutOfStock } from '@/lib/productStock';
 import { Product } from '@/types';
 
 type Props = {
@@ -15,12 +16,14 @@ type Props = {
 export default function GridProductCard({ product }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { addItem, updateQuantity, getQuantity } = useCart();
-  const quantity = getQuantity(product.id);
+  const { openProduct } = useProductDetail();
+  const outOfStock = isOutOfStock(product);
   const discount = product.mrp ? product.mrp - product.price : 0;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <Pressable
+      onPress={() => openProduct(product)}
+      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {discount > 0 ? (
         <View style={styles.discountRibbon}>
           <Text style={styles.discountText}>₹{discount} OFF</Text>
@@ -28,7 +31,12 @@ export default function GridProductCard({ product }: Props) {
       ) : null}
 
       <View style={[styles.imageWrap, { backgroundColor: colors.background }]}>
-        <ProductImage product={product} style={styles.productImage} emojiStyle={styles.emoji} />
+        <ProductImageGallery product={product} style={styles.productImage} emojiStyle={styles.emoji} />
+        {outOfStock ? (
+          <View style={styles.outOfStockOverlay}>
+            <Text style={styles.outOfStockOverlayText}>OUT OF STOCK</Text>
+          </View>
+        ) : null}
       </View>
 
       <Text style={[styles.brand, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -49,14 +57,9 @@ export default function GridProductCard({ product }: Props) {
       </View>
 
       <View style={styles.addRow}>
-        <QuantityStepper
-          quantity={quantity}
-          onIncrease={() => (quantity === 0 ? addItem(product) : updateQuantity(product.id, quantity + 1))}
-          onDecrease={() => updateQuantity(product.id, quantity - 1)}
-          compact
-        />
+        <ProductCartControls product={product} compact />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -93,6 +96,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.sm,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  outOfStockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+  },
+  outOfStockOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   productImage: {
     width: '100%',

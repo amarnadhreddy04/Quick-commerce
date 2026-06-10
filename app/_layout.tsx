@@ -2,12 +2,14 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { DeliveryAreaProvider } from '@/context/DeliveryAreaContext';
+import { ProductDetailProvider } from '@/context/ProductDetailContext';
 
 export {
   ErrorBoundary,
@@ -61,6 +63,11 @@ function RootStack() {
           name="order-success"
           options={{ headerShown: true, title: 'Order Placed', headerBackVisible: false }}
         />
+        <Stack.Screen
+          name="order/[id]"
+          options={{ headerShown: true, title: 'Order Details', headerBackTitle: 'Orders' }}
+        />
+        <Stack.Screen name="profile" options={{ headerShown: false }} />
       </Stack>
     </>
   );
@@ -83,13 +90,15 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <CatalogProvider>
-        <CartProvider>
-          <DeliveryAreaProvider>
-            {loaded ? <RootStack /> : null}
-          </DeliveryAreaProvider>
-        </CartProvider>
-      </CatalogProvider>
+      <DeliveryAreaProvider>
+        <CatalogProvider>
+          <CartProvider>
+            <ProductDetailProvider>
+              {loaded ? <RootStack /> : null}
+            </ProductDetailProvider>
+          </CartProvider>
+        </CatalogProvider>
+      </DeliveryAreaProvider>
     </AuthProvider>
   );
 }

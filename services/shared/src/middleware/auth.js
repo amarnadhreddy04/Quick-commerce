@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 
+import { formatProductImagesRow } from '../productImages.js';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'milkbasket-dev-secret-change-in-production';
 
 export function signToken(user) {
@@ -57,10 +59,13 @@ export function formatCategory(row) {
     color: row.color,
     thumbnail: row.thumbnail,
     description: row.description ?? '',
+    sortOrder: row.sort_order ?? 0,
   };
 }
 
 export function formatProduct(row) {
+  const { images, image } = formatProductImagesRow(row);
+
   return {
     id: row.id,
     name: row.name,
@@ -70,7 +75,8 @@ export function formatProduct(row) {
     price: row.price,
     mrp: row.mrp,
     unit: row.unit,
-    image: row.image,
+    image,
+    images,
     description: row.description ?? '',
     subscription: !!row.subscription,
     tag: row.tag,

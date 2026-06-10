@@ -26,6 +26,7 @@ const styles = StyleSheet.create({
   banner: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.md,
+    marginBottom: spacing.md,
     borderRadius: radius.lg,
     padding: spacing.lg,
   },

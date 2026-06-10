@@ -4,10 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useWalletEnabled } from '@/hooks/useWalletEnabled';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function WalletBanner() {
+  const walletEnabled = useWalletEnabled();
   const { user } = useAuth();
+
+  if (!walletEnabled) return null;
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -33,6 +37,7 @@ const styles = StyleSheet.create({
   banner: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.md,
+    marginBottom: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
     padding: spacing.lg,

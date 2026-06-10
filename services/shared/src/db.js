@@ -1,9 +1,13 @@
+import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import initSqlJs from 'sql.js';
 
+import { ensureDemoUsers } from './ensureDemoUsers.js';
+import { migrateGroceryCategories } from './groceryCategories.js';
 import { BANNER_IMAGES, CATEGORY_IMAGES, PRODUCT_IMAGES, isImageUri } from './mediaUrls.js';
+import { formatProductImagesRow } from './productImages.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, '..', '..', '..');
@@ -56,6 +60,7 @@ const SCHEMA = `
     mrp REAL,
     unit TEXT,
     image TEXT,
+    images TEXT,
     description TEXT,
     subscription INTEGER NOT NULL DEFAULT 0,
     tag TEXT,
@@ -118,6 +123,41 @@ const SCHEMA = `
     pincode TEXT PRIMARY KEY,
     label TEXT NOT NULL,
     active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS product_pincodes (
+    product_id TEXT NOT NULL,
+    pincode TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (product_id, pincode)
+  );
+
+  CREATE TABLE IF NOT EXISTS category_pincodes (
+    category_id TEXT NOT NULL,
+    pincode TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (category_id, pincode)
+  );
+
+  CREATE TABLE IF NOT EXISTS stock_notify_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    notified_at TEXT,
+    UNIQUE(user_id, product_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS user_addresses (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    label TEXT NOT NULL DEFAULT 'Home',
+    line1 TEXT NOT NULL,
+    line2 TEXT,
+    pincode TEXT NOT NULL,
+    city TEXT,
+    is_default INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `;
@@ -193,6 +233,7 @@ function migrateDatabase() {
 
   const defaultPincodes = [
     ['523201', 'Addanki, Andhra Pradesh'],
+    ['523157', 'Chirala, Andhra Pradesh'],
     ['522601', 'Vinukonda, Andhra Pradesh'],
     ['513255', 'Rayadurg, Andhra Pradesh'],
   ];
@@ -210,6 +251,19 @@ function migrateDatabase() {
 
   getDb().run('UPDATE app_settings SET min_order_value = 299, delivery_fee = 30 WHERE id = 1');
 
+  const settingsColumns = queryAll('PRAGMA table_info(app_settings)');
+  const settingsColumnNames = new Set(settingsColumns.map((col) => col.name));
+  if (!settingsColumnNames.has('wallet_enabled')) {
+    getDb().run('ALTER TABLE app_settings ADD COLUMN wallet_enabled INTEGER NOT NULL DEFAULT 0');
+  }
+  const settingsRow = queryOne('SELECT id FROM app_settings WHERE id = 1');
+  if (!settingsRow) {
+    getDb().run(
+      `INSERT INTO app_settings (id, delivery_cutoff, delivery_slot, min_order_value, delivery_fee, wallet_enabled)
+       VALUES (1, '11:00 PM', 'Tomorrow, 6:00 AM – 8:00 AM', 299, 30, 0)`
+    );
+  }
+
   getDb().run(
     `UPDATE users SET pincode = '523201', location = 'Addanki, Andhra Pradesh'
      WHERE email = 'amar@example.com' AND (pincode IS NULL OR pincode = '')`
@@ -226,8 +280,145 @@ function migrateDatabase() {
   if (!productColumnNames.has('description')) {
     getDb().run('ALTER TABLE products ADD COLUMN description TEXT');
   }
+  if (!productColumnNames.has('images')) {
+    getDb().run('ALTER TABLE products ADD COLUMN images TEXT');
+  }
+
+  getDb().exec(`
+    CREATE TABLE IF NOT EXISTS product_pincodes (
+      product_id TEXT NOT NULL,
+      pincode TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (product_id, pincode)
+    );
+    CREATE TABLE IF NOT EXISTS category_pincodes (
+      category_id TEXT NOT NULL,
+      pincode TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (category_id, pincode)
+    );
+  `);
+
+  getDb().exec(`
+    CREATE TABLE IF NOT EXISTS stock_notify_requests (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      product_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      notified_at TEXT,
+      UNIQUE(user_id, product_id)
+    );
+    CREATE TABLE IF NOT EXISTS user_addresses (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      label TEXT NOT NULL DEFAULT 'Home',
+      line1 TEXT NOT NULL,
+      line2 TEXT,
+      pincode TEXT NOT NULL,
+      city TEXT,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  migrateUserAddresses();
 
   migrateCatalogImages();
+  migrateProductImages();
+  migrateOrderItems();
+  migrateLocationCatalog();
+  migrateGroceryCategories({ queryOne, run, getDb, queryAll });
+  ensureDemoUsers();
+}
+
+function migrateUserAddresses() {
+  const users = queryAll(
+    `SELECT id, location, pincode FROM users
+     WHERE role = 'customer' AND pincode IS NOT NULL AND pincode != ''`
+  );
+
+  users.forEach((user) => {
+    const existing = queryOne('SELECT id FROM user_addresses WHERE user_id = ? LIMIT 1', [user.id]);
+    if (existing) return;
+
+    const pincode = String(user.pincode).replace(/\D/g, '');
+    if (pincode.length !== 6) return;
+
+    const line1 = user.location?.replace(/\s*\d{6}\s*$/, '').trim() || 'Home';
+    getDb().run(
+      `INSERT INTO user_addresses (id, user_id, label, line1, line2, pincode, city, is_default)
+       VALUES (?, ?, 'Home', ?, NULL, ?, ?, 1)`,
+      [randomUUID(), user.id, line1, pincode, user.location ?? pincode]
+    );
+  });
+}
+
+function migrateLocationCatalog() {
+  const eggsCategory = queryOne('SELECT id FROM categories WHERE id = ?', ['eggs']);
+  const eggsProduct = queryOne('SELECT id FROM products WHERE id = ?', ['p5']);
+  const eggsCategoryPins = queryOne('SELECT 1 as ok FROM category_pincodes WHERE category_id = ?', ['eggs']);
+  const eggsProductPins = queryOne('SELECT 1 as ok FROM product_pincodes WHERE product_id = ?', ['p5']);
+
+  if (eggsCategory && !eggsCategoryPins) {
+    getDb().run(
+      'INSERT OR IGNORE INTO category_pincodes (category_id, pincode, active) VALUES (?, ?, 1)',
+      ['eggs', '523201']
+    );
+  }
+
+  if (eggsProduct && !eggsProductPins) {
+    getDb().run(
+      'INSERT OR IGNORE INTO product_pincodes (product_id, pincode, active) VALUES (?, ?, 1)',
+      ['p5', '523201']
+    );
+  }
+}
+
+const DEMO_ORDER_ITEMS = {
+  'MB-10482': [
+    ['p1', 2, 28],
+    ['p3', 1, 45],
+    ['p5', 1, 72],
+    ['p6', 1, 48],
+    ['p8', 2, 32],
+  ],
+};
+
+function migrateOrderItems() {
+  const orphans = queryAll(`
+    SELECT o.id
+    FROM orders o
+    WHERE o.items_count > 0
+      AND NOT EXISTS (SELECT 1 FROM order_items oi WHERE oi.order_id = o.id)
+  `);
+
+  orphans.forEach((order) => {
+    const items = DEMO_ORDER_ITEMS[order.id];
+    if (!items) return;
+
+    items.forEach(([productId, quantity, price]) => {
+      getDb().run(
+        'INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
+        [randomUUID(), order.id, productId, quantity, price]
+      );
+    });
+  });
+
+  if (orphans.some((order) => DEMO_ORDER_ITEMS[order.id])) {
+    saveDatabase();
+  }
+}
+
+function migrateProductImages() {
+  const rows = queryAll('SELECT id, image, images FROM products');
+  rows.forEach((row) => {
+    const { images, image } = formatProductImagesRow(row);
+    getDb().run('UPDATE products SET image = ?, images = ? WHERE id = ?', [
+      image,
+      JSON.stringify(images),
+      row.id,
+    ]);
+  });
 }
 
 function migrateCatalogImages() {

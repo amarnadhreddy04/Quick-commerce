@@ -19,6 +19,7 @@ import {
 
 const TOKEN_KEY = 'milkbasket-token';
 const PINCODE_KEY = 'milkbasket-pincode';
+const ACTIVE_ADDRESS_KEY = 'milkbasket-active-address-id';
 
 async function withStoredPincode(user: ApiUser): Promise<ApiUser> {
   if (user.pincode?.replace(/\D/g, '').length === 6) {
@@ -44,6 +45,7 @@ type AuthContextValue = {
     location?: string;
     pincode: string;
   }) => Promise<RegisterNotifications>;
+  refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -105,8 +107,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await persistSession(nextToken, nextUser);
         return notifications;
       },
+      refreshUser: async () => {
+        if (!token) return;
+        const { user: nextUser } = await meRequest(token);
+        const userWithPincode = await withStoredPincode(nextUser);
+        setUser(userWithPincode);
+        if (userWithPincode.pincode) {
+          await AsyncStorage.setItem(PINCODE_KEY, userWithPincode.pincode);
+        }
+      },
       logout: async () => {
-        await AsyncStorage.multiRemove([TOKEN_KEY, PINCODE_KEY]);
+        await AsyncStorage.multiRemove([TOKEN_KEY, PINCODE_KEY, ACTIVE_ADDRESS_KEY]);
         setToken(null);
         setUser(null);
       },

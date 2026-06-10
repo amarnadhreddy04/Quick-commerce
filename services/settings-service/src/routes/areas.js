@@ -72,6 +72,7 @@ function checkAvailability(lat, lng) {
 
 const DEFAULT_PINCODES = [
   { pincode: '523201', label: 'Addanki, Andhra Pradesh' },
+  { pincode: '523157', label: 'Chirala, Andhra Pradesh' },
   { pincode: '522601', label: 'Vinukonda, Andhra Pradesh' },
   { pincode: '513255', label: 'Rayadurg, Andhra Pradesh' },
 ];
@@ -156,6 +157,52 @@ router.get('/check', (req, res) => {
 router.get('/', (_req, res) => {
   const areas = queryAll('SELECT * FROM service_areas ORDER BY name');
   res.json({ areas: areas.map(formatArea) });
+});
+
+router.post('/pincodes', authRequired, adminRequired, async (req, res) => {
+  const pincode = String(req.body.pincode ?? '').replace(/\D/g, '');
+  const label = String(req.body.label ?? '').trim();
+
+  if (pincode.length !== 6 || !label) {
+    return res.status(400).json({ error: 'Valid 6-digit pincode and location label are required' });
+  }
+
+  const existing = queryOne('SELECT pincode FROM service_pincodes WHERE pincode = ?', [pincode]);
+  if (existing) {
+    return res.status(409).json({ error: 'Pincode already exists' });
+  }
+
+  run('INSERT INTO service_pincodes (pincode, label, active) VALUES (?, ?, 1)', [pincode, label]);
+  await publishSyncEvent({ domain: 'areas', action: 'created', entity: 'service_pincode', id: pincode });
+  res.status(201).json({
+    pincode: { pincode, label, active: true },
+  });
+});
+
+router.put('/pincodes/:pincode', authRequired, adminRequired, async (req, res) => {
+  const pincode = String(req.params.pincode).replace(/\D/g, '');
+  const existing = queryOne('SELECT * FROM service_pincodes WHERE pincode = ?', [pincode]);
+  if (!existing) return res.status(404).json({ error: 'Pincode not found' });
+
+  const label = String(req.body.label ?? existing.label).trim();
+  const active = req.body.active === false ? 0 : 1;
+  run('UPDATE service_pincodes SET label = ?, active = ? WHERE pincode = ?', [label, active, pincode]);
+  await publishSyncEvent({ domain: 'areas', action: 'updated', entity: 'service_pincode', id: pincode });
+  res.json({
+    pincode: { pincode, label, active: !!active },
+  });
+});
+
+router.delete('/pincodes/:pincode', authRequired, adminRequired, async (req, res) => {
+  const pincode = String(req.params.pincode).replace(/\D/g, '');
+  const existing = queryOne('SELECT pincode FROM service_pincodes WHERE pincode = ?', [pincode]);
+  if (!existing) return res.status(404).json({ error: 'Pincode not found' });
+
+  run('DELETE FROM service_pincodes WHERE pincode = ?', [pincode]);
+  run('DELETE FROM product_pincodes WHERE pincode = ?', [pincode]);
+  run('DELETE FROM category_pincodes WHERE pincode = ?', [pincode]);
+  await publishSyncEvent({ domain: 'areas', action: 'deleted', entity: 'service_pincode', id: pincode });
+  res.json({ success: true });
 });
 
 router.post('/', authRequired, adminRequired, async (req, res) => {

@@ -1,5 +1,18 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+
+import OrderFilters from '../components/OrderFilters';
 import PageHeader from '../components/PageHeader';
 import '../components/shared.css';
+import {
+  calculateRevenue,
+  defaultOrderFilters,
+  filterOrders,
+  filtersFromSearchParams,
+  filtersToSearchParams,
+  getPeriodLabel,
+  type OrderFilterState,
+} from '../lib/orderFilters';
 import { useAdminStore } from '../store/AdminStore';
 import type { OrderStatus } from '../types';
 
@@ -17,14 +30,63 @@ const statusBadge: Record<string, string> = {
 };
 
 export default function Orders() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { orders, updateOrderStatus } = useAdminStore();
+  const [filters, setFilters] = useState<OrderFilterState>(() =>
+    filtersFromSearchParams(searchParams)
+  );
+  useEffect(() => {
+    setFilters(filtersFromSearchParams(searchParams));
+  }, [searchParams]);
+
+  const filteredOrders = useMemo(() => filterOrders(orders, filters), [orders, filters]);
+  const deliveredRevenue = useMemo(
+    () => calculateRevenue(filteredOrders, 'delivered'),
+    [filteredOrders]
+  );
+  const paidRevenue = useMemo(() => calculateRevenue(filteredOrders, 'paid'), [filteredOrders]);
+  const totalSales = useMemo(
+    () => calculateRevenue(filteredOrders, 'all_except_cancelled'),
+    [filteredOrders]
+  );
+
+  const updateFilters = (next: OrderFilterState) => {
+    setFilters(next);
+    setSearchParams(filtersToSearchParams(next), { replace: true });
+  };
 
   return (
     <div>
-      <PageHeader
-        title="Orders"
-        subtitle="Track and update delivery status"
-      />
+      <PageHeader title="Orders" subtitle="Filter, track, and update delivery status" />
+
+      <div className="card filter-card">
+        <div className="card-header">Filters</div>
+        <OrderFilters filters={filters} onChange={updateFilters} />
+      </div>
+
+      <div className="summary-strip">
+        <div className="summary-pill">
+          <span>Period</span>
+          <strong>{getPeriodLabel(filters.period)}</strong>
+        </div>
+        <div className="summary-pill">
+          <span>Orders</span>
+          <strong>{filteredOrders.length}</strong>
+        </div>
+        <div className="summary-pill">
+          <span>Delivered Revenue</span>
+          <strong>₹{deliveredRevenue}</strong>
+        </div>
+        <div className="summary-pill">
+          <span>Paid Revenue</span>
+          <strong>₹{paidRevenue}</strong>
+        </div>
+        <div className="summary-pill">
+          <span>Total Sales</span>
+          <strong>₹{totalSales}</strong>
+        </div>
+      </div>
 
       <div className="card">
         <div className="table-wrap">
@@ -43,39 +105,48 @@ export default function Orders() {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td>{order.id}</td>
-                  <td>{order.customerName}</td>
-                  <td>{order.date}</td>
-                  <td>{order.deliverySlot}</td>
-                  <td>{order.items}</td>
-                  <td>₹{order.total}</td>
-                  <td>
-                    <span className={`badge ${statusBadge[order.paymentStatus ?? 'pending']}`}>
-                      {order.paymentMethod ?? '—'} · {order.paymentStatus ?? 'pending'}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge ${statusBadge[order.status] ?? 'yellow'}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td>
-                    <select
-                      value={order.status}
-                      onChange={(event) =>
-                        updateOrderStatus(order.id, event.target.value as OrderStatus)
-                      }>
-                      {statuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
+              {filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={9}>No orders match the selected filters.</td>
                 </tr>
-              ))}
+              ) : (
+                filteredOrders.map((order) => (
+                  <tr
+                    key={order.id}
+                    className="clickable-row"
+                    onClick={() => navigate(`/orders/${order.id}`)}>
+                    <td>{order.id}</td>
+                    <td>{order.customerName}</td>
+                    <td>{order.date}</td>
+                    <td>{order.deliverySlot}</td>
+                    <td>{order.items}</td>
+                    <td>₹{order.total}</td>
+                    <td>
+                      <span className={`badge ${statusBadge[order.paymentStatus ?? 'pending']}`}>
+                        {order.paymentMethod ?? '—'} · {order.paymentStatus ?? 'pending'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${statusBadge[order.status] ?? 'yellow'}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td onClick={(event) => event.stopPropagation()}>
+                      <select
+                        value={order.status}
+                        onChange={(event) =>
+                          updateOrderStatus(order.id, event.target.value as OrderStatus)
+                        }>
+                        {statuses.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

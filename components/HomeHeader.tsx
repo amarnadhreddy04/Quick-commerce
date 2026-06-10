@@ -1,16 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
 import { spacing } from '@/constants/theme';
-import { useAuth } from '@/context/AuthContext';
 import { useDeliveryAreaOptional } from '@/context/DeliveryAreaContext';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function HomeHeader() {
-  const { user } = useAuth();
-  const areaName = useDeliveryAreaOptional()?.areaName;
+  const router = useRouter();
+  const delivery = useDeliveryAreaOptional();
+  const activeAddress = delivery?.activeAddress;
+  const areaName = delivery?.areaName;
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -28,12 +30,16 @@ export default function HomeHeader() {
       <View style={styles.brandRow}>
         <View>
           <Text style={[styles.brand, { color: colors.primary }]}>Milkbasket</Text>
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-            <Text style={[styles.location, { color: colors.textSecondary }]}>
-              Delivering to {areaName ?? user?.location ?? 'your area'}
+          <Pressable
+            onPress={() => router.push('/profile/address')}
+            style={styles.locationRow}
+            hitSlop={8}>
+            <Ionicons name="location-outline" size={14} color={colors.primary} />
+            <Text style={[styles.location, { color: colors.textSecondary }]} numberOfLines={1}>
+              Delivering to {activeAddress?.label ?? areaName ?? 'your area'}
             </Text>
-          </View>
+            <Ionicons name="chevron-down" size={14} color={colors.primary} />
+          </Pressable>
         </View>
         <View style={[styles.searchPill, { backgroundColor: colors.background }]}>
           <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
@@ -65,9 +71,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     marginTop: 2,
+    maxWidth: '100%',
   },
   location: {
     fontSize: 12,
+    flexShrink: 1,
   },
   searchPill: {
     flexDirection: 'row',

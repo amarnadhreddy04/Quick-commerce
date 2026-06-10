@@ -34,7 +34,7 @@ export default function CategoryGrid() {
               emojiStyle={styles.categoryEmoji}
             />
           </View>
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
             {category.name}
           </Text>
         </Pressable>
@@ -51,9 +51,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   item: {
-    width: '22%',
+    width: '23%',
     alignItems: 'center',
     gap: spacing.sm,
+    marginBottom: spacing.xs,
   },
   iconWrap: {
     width: 56,

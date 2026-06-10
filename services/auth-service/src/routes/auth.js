@@ -4,10 +4,14 @@ import { v4 as uuid } from 'uuid';
 
 import { queryOne, run } from '../../../shared/src/db.js';
 import { authRequired, formatUser, signToken } from '../../../shared/src/middleware/auth.js';
+import { createAddress } from '../../../shared/src/userAddresses.js';
+import addressRoutes from './addresses.js';
 
 const router = Router();
+
+router.use('/addresses', addressRoutes);
 const NOTIFICATION_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3017';
-const DEFAULT_PINCODES = ['523201', '522601', '513255'];
+const DEFAULT_PINCODES = ['523201', '523157', '522601', '513255'];
 
 function isPincodeServiceable(pincodeDigits) {
   try {
@@ -58,7 +62,7 @@ router.post('/register', async (req, res) => {
 
   if (!isPincodeServiceable(pincodeDigits)) {
     return res.status(400).json({
-      error: 'Delivery is not available for this pincode. We currently serve: 523201, 522601, 513255',
+      error: 'Delivery is not available for this pincode. We currently serve: 523201, 523157, 522601, 513255',
     });
   }
 
@@ -75,6 +79,13 @@ router.post('/register', async (req, res) => {
      VALUES (?, ?, ?, ?, ?, 'customer', ?, ?, 0, 1)`,
     [id, name, email.toLowerCase(), phone, passwordHash, location ?? null, pincodeDigits]
   );
+
+  createAddress(id, {
+    label: 'Home',
+    line1: location?.replace(/\s*\d{6}\s*$/, '').trim() || 'Home',
+    pincode: pincodeDigits,
+    isDefault: true,
+  });
 
   const user = queryOne('SELECT * FROM users WHERE id = ?', [id]);
   const token = signToken(user);

@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import { v4 as uuid } from 'uuid';
 
-import { queryOne, run, transaction } from '../../../shared/src/db.js';
+import { queryAll, queryOne, run, transaction } from '../../../shared/src/db.js';
 import { authRequired } from '../../../shared/src/middleware/auth.js';
+import {
+  decrementStockForItems,
+  publishStockSyncForItems,
+  validateOrderStock,
+} from '../../../shared/src/productStock.js';
 import { publishSyncEvent } from '../../../shared/src/sync/publish.js';
 import {
   createRazorpayOrder,
@@ -30,13 +35,23 @@ function formatOrder(row) {
   };
 }
 
+function isWalletEnabled() {
+  const settings = queryOne('SELECT wallet_enabled FROM app_settings WHERE id = 1');
+  return settings?.wallet_enabled === 1;
+}
+
+function paymentMethods() {
+  const base = isRazorpayConfigured() ? ['razorpay', 'wallet', 'cod'] : ['demo', 'wallet', 'cod'];
+  return isWalletEnabled() ? base : base.filter((method) => method !== 'wallet');
+}
+
 router.get('/config', authRequired, (_req, res) => {
   res.json({
     provider: 'razorpay',
     keyId: getRazorpayKeyId(),
     configured: isRazorpayConfigured(),
     currency: 'INR',
-    methods: isRazorpayConfigured() ? ['razorpay', 'wallet', 'cod'] : ['demo', 'wallet', 'cod'],
+    methods: paymentMethods(),
     demoMode: !isRazorpayConfigured(),
   });
 });
@@ -56,6 +71,11 @@ router.post('/create-order', authRequired, async (req, res) => {
 
   if (!items?.length || !total) {
     return res.status(400).json({ error: 'Cart items and total are required' });
+  }
+
+  const stockCheck = validateOrderStock(items);
+  if (!stockCheck.ok) {
+    return res.status(400).json({ error: stockCheck.error });
   }
 
   const expected = calculateOrderAmount(items);
@@ -86,10 +106,14 @@ router.post('/create-order', authRequired, async (req, res) => {
           [uuid(), orderId, item.productId, item.quantity, item.price]
         );
       });
+      decrementStockForItems(items);
     });
 
     const order = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
-    await publishSyncEvent({ domain: 'orders', action: 'created', entity: 'order', id: orderId });
+    await Promise.all([
+      publishSyncEvent({ domain: 'orders', action: 'created', entity: 'order', id: orderId }),
+      publishStockSyncForItems(items),
+    ]);
     return res.status(201).json({
       paymentMethod: 'cod',
       order: formatOrder(order),
@@ -97,6 +121,9 @@ router.post('/create-order', authRequired, async (req, res) => {
   }
 
   if (paymentMethod === 'wallet') {
+    if (!isWalletEnabled()) {
+      return res.status(400).json({ error: 'Wallet payments are currently disabled' });
+    }
     if (user.wallet_balance < total) {
       return res.status(400).json({ error: 'Insufficient wallet balance' });
     }
@@ -114,10 +141,14 @@ router.post('/create-order', authRequired, async (req, res) => {
           [uuid(), orderId, item.productId, item.quantity, item.price]
         );
       });
+      decrementStockForItems(items);
     });
 
     const order = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
-    await publishSyncEvent({ domain: 'orders', action: 'created', entity: 'order', id: orderId });
+    await Promise.all([
+      publishSyncEvent({ domain: 'orders', action: 'created', entity: 'order', id: orderId }),
+      publishStockSyncForItems(items),
+    ]);
     return res.status(201).json({
       paymentMethod: 'wallet',
       order: formatOrder(order),
@@ -191,14 +222,29 @@ router.post('/verify', authRequired, async (req, res) => {
     return res.status(400).json({ error: 'Payment verification failed' });
   }
 
-  run(
-    `UPDATE orders SET payment_status = 'paid', status = 'scheduled', razorpay_payment_id = ?, payment_method = 'razorpay'
-     WHERE id = ?`,
-    [razorpayPaymentId, orderId]
+  const lineItems = queryAll(
+    'SELECT product_id as productId, quantity FROM order_items WHERE order_id = ?',
+    [orderId]
   );
+  const stockCheck = validateOrderStock(lineItems);
+  if (!stockCheck.ok) {
+    return res.status(400).json({ error: stockCheck.error });
+  }
+
+  transaction(() => {
+    run(
+      `UPDATE orders SET payment_status = 'paid', status = 'scheduled', razorpay_payment_id = ?, payment_method = 'razorpay'
+       WHERE id = ?`,
+      [razorpayPaymentId, orderId]
+    );
+    decrementStockForItems(lineItems);
+  });
 
   const updated = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
-  await publishSyncEvent({ domain: 'orders', action: 'updated', entity: 'order', id: orderId });
+  await Promise.all([
+    publishSyncEvent({ domain: 'orders', action: 'updated', entity: 'order', id: orderId }),
+    publishStockSyncForItems(lineItems),
+  ]);
   res.json({ success: true, order: formatOrder(updated) });
 });
 

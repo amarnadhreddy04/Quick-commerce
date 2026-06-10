@@ -73,7 +73,7 @@ export default function RegisterScreen() {
       if (!availability.available) {
         throw new Error(
           availability.message ??
-            'Delivery is not available for this pincode. We serve: 523201, 522601, 513255'
+            'Delivery is not available for this pincode. We serve: 523201, 523157, 522601, 513255'
         );
       }
 
@@ -271,7 +271,7 @@ export default function RegisterScreen() {
               </Text>
             ) : (
               <Text style={[styles.fieldHintInfo, { color: colors.textSecondary }]}>
-                Available pincodes: 523201, 522601, 513255
+                Available pincodes: 523201, 523157, 522601, 513255
               </Text>
             )}
           </View>

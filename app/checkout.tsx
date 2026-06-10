@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
+import { useWalletEnabled } from '@/hooks/useWalletEnabled';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useCatalog } from '@/context/CatalogContext';
@@ -48,10 +49,11 @@ export default function CheckoutScreen() {
   const params = useLocalSearchParams<{ method?: string }>();
   const method = (params.method ?? 'cod') as PaymentMethod;
   const { token } = useAuth();
-  const { settings, refreshOrders } = useCatalog();
+  const { settings, refreshCatalog, refreshOrders } = useCatalog();
   const { items, subtotal, clearCart } = useCart();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const walletEnabled = useWalletEnabled();
 
   const [step, setStep] = useState<CheckoutStep>('review');
   const [loading, setLoading] = useState(false);
@@ -76,6 +78,12 @@ export default function CheckoutScreen() {
     }
   }, [items.length, router, step]);
 
+  useEffect(() => {
+    if (!walletEnabled && method === 'wallet') {
+      router.replace('/payment');
+    }
+  }, [walletEnabled, method, router]);
+
   const buildPayload = () => ({
     items: items.map((item) => ({
       productId: item.product.id,
@@ -91,7 +99,7 @@ export default function CheckoutScreen() {
   const goToSuccess = (message: string, orderId?: string) => {
     setSuccessInfo({ message, orderId });
     setStep('success');
-    refreshOrders().catch(() => undefined);
+    Promise.all([refreshOrders(), refreshCatalog()]).catch(() => undefined);
     clearCart();
   };
 

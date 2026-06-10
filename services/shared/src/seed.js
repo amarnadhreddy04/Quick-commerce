@@ -2,12 +2,12 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuid } from 'uuid';
 
 import { initDatabase, queryOne, run, transaction } from './db.js';
-import { BANNER_IMAGES, CATEGORY_IMAGES, PRODUCT_IMAGES } from './mediaUrls.js';
+import { BANNER_IMAGES, CATEGORY_IMAGES, PRODUCT_IMAGE_SETS } from './mediaUrls.js';
 
 await initDatabase();
 
-const categoryCount = queryOne('SELECT COUNT(*) as count FROM categories').count;
-if (categoryCount > 0) {
+const userCount = queryOne('SELECT COUNT(*) as count FROM users').count;
+if (userCount > 0) {
   console.log('Database already seeded.');
   process.exit(0);
 }
@@ -50,19 +50,19 @@ transaction(() => {
   });
 
   const products = [
-    ['p1', 'Toned Milk', 'Amul', 'milk', 'toned', 28, 30, '500 ml', PRODUCT_IMAGES.p1, 'Pasteurized toned milk, perfect for daily tea and coffee.', 1, 'Daily Essential', 120],
-    ['p2', 'Full Cream Milk', 'Mother Dairy', 'milk', 'full-cream', 34, 36, '500 ml', PRODUCT_IMAGES.p2, 'Rich and creamy full-cream milk for the whole family.', 1, null, 85],
-    ['p3', 'Brown Bread', 'Britannia', 'bread', 'brown', 45, 50, '400 g', PRODUCT_IMAGES.p3, 'Soft brown bread baked fresh for a healthy breakfast.', 0, 'Fresh Today', 60],
-    ['p5', 'Farm Fresh Eggs', 'Eggoz', 'eggs', 'farm', 72, 80, '6 pcs', PRODUCT_IMAGES.p5, 'Protein-rich farm eggs with bright yolks.', 1, null, 95],
-    ['p6', 'Banana', 'Fresh', 'fruits', 'seasonal', 48, null, '6 pcs', PRODUCT_IMAGES.p6, 'Naturally ripened bananas, sweet and ready to eat.', 0, null, 70],
-    ['p8', 'Tomato', 'Fresh', 'vegetables', 'root', 32, null, '500 g', PRODUCT_IMAGES.p8, 'Juicy red tomatoes for curries, salads and chutneys.', 0, null, 55],
-    ['p12', 'Potato Chips', 'Lays', 'snacks', 'chips', 20, null, '52 g', PRODUCT_IMAGES.p12, 'Classic salted potato chips for quick snacking.', 0, null, 100],
+    ['p1', 'Toned Milk', 'Amul', 'milk', 'toned', 28, 30, '500 ml', PRODUCT_IMAGE_SETS.p1, 'Pasteurized toned milk, perfect for daily tea and coffee.', 1, 'Daily Essential', 120],
+    ['p2', 'Full Cream Milk', 'Mother Dairy', 'milk', 'full-cream', 34, 36, '500 ml', PRODUCT_IMAGE_SETS.p2, 'Rich and creamy full-cream milk for the whole family.', 1, null, 85],
+    ['p3', 'Brown Bread', 'Britannia', 'bread', 'brown', 45, 50, '400 g', PRODUCT_IMAGE_SETS.p3, 'Soft brown bread baked fresh for a healthy breakfast.', 0, 'Fresh Today', 60],
+    ['p5', 'Farm Fresh Eggs', 'Eggoz', 'eggs', 'farm', 72, 80, '6 pcs', PRODUCT_IMAGE_SETS.p5, 'Protein-rich farm eggs with bright yolks.', 1, null, 95],
+    ['p6', 'Banana', 'Fresh', 'fruits', 'seasonal', 48, null, '6 pcs', PRODUCT_IMAGE_SETS.p6, 'Naturally ripened bananas, sweet and ready to eat.', 0, null, 70],
+    ['p8', 'Tomato', 'Fresh', 'fruits', 'leafy', 32, null, '500 g', PRODUCT_IMAGE_SETS.p8, 'Juicy red tomatoes for curries, salads and chutneys.', 0, null, 55],
+    ['p12', 'Potato Chips', 'Lays', 'snacks', 'chips', 20, null, '52 g', PRODUCT_IMAGE_SETS.p12, 'Classic salted potato chips for quick snacking.', 0, null, 100],
   ];
-  products.forEach(([id, name, brand, cat, sub, price, mrp, unit, image, description, sub_flag, tag, stock]) => {
+  products.forEach(([id, name, brand, cat, sub, price, mrp, unit, images, description, sub_flag, tag, stock]) => {
     run(
-      `INSERT INTO products (id, name, brand, category_id, sub_category_id, price, mrp, unit, image, description, subscription, tag, stock, active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [id, name, brand, cat, sub, price, mrp, unit, image, description, sub_flag, tag, stock]
+      `INSERT INTO products (id, name, brand, category_id, sub_category_id, price, mrp, unit, image, images, description, subscription, tag, stock, active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [id, name, brand, cat, sub, price, mrp, unit, images[0], JSON.stringify(images), description, sub_flag, tag, stock]
     );
   });
 
@@ -93,9 +93,22 @@ transaction(() => {
     ['MB-10482', customerId, '7 Jun 2026', 312, 'Tomorrow, 6:00 AM', 5]
   );
 
+  [
+    ['p1', 2, 28],
+    ['p3', 1, 45],
+    ['p5', 1, 72],
+    ['p6', 1, 48],
+    ['p8', 2, 32],
+  ].forEach(([productId, quantity, price]) => {
+    run(
+      'INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
+      [uuid(), 'MB-10482', productId, quantity, price]
+    );
+  });
+
   run(
-    `INSERT INTO app_settings (id, delivery_cutoff, delivery_slot, min_order_value, delivery_fee)
-     VALUES (1, ?, ?, ?, ?)`,
+    `INSERT INTO app_settings (id, delivery_cutoff, delivery_slot, min_order_value, delivery_fee, wallet_enabled)
+     VALUES (1, ?, ?, ?, ?, 0)`,
     ['11:00 PM', 'Tomorrow, 6:00 AM – 8:00 AM', 299, 30]
   );
 

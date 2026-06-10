@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ProductImage from '@/components/ProductImage';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
+import { useWalletEnabled } from '@/hooks/useWalletEnabled';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { calculateOrderTotal, freeDeliveryMessage } from '@/lib/cartFees';
@@ -19,11 +20,11 @@ export default function PaymentScreen() {
   const { items, subtotal } = useCart();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const walletEnabled = useWalletEnabled();
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
 
   const { deliveryFee, total } = calculateOrderTotal(subtotal);
   const deliveryHint = freeDeliveryMessage(subtotal);
-  const canUseWallet = (user?.walletBalance ?? 0) >= total;
   const isDemoMode = paymentConfig?.demoMode ?? !paymentConfig?.configured;
 
   useEffect(() => {
@@ -106,14 +107,16 @@ export default function PaymentScreen() {
             colors={colors}
           />
 
-          <PaymentOption
-            label="Wallet"
-            sublabel={`Balance ₹${(user?.walletBalance ?? 0).toFixed(2)}`}
-            icon="wallet-outline"
-            onPress={() => goToCheckout('wallet')}
-            colors={colors}
-            disabled={!canUseWallet}
-          />
+          {walletEnabled ? (
+            <PaymentOption
+              label="Wallet"
+              sublabel={`Balance ₹${(user?.walletBalance ?? 0).toFixed(2)}`}
+              icon="wallet-outline"
+              onPress={() => goToCheckout('wallet')}
+              colors={colors}
+              disabled={(user?.walletBalance ?? 0) < total}
+            />
+          ) : null}
         </ScrollView>
 
         <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>

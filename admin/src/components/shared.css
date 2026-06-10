@@ -32,6 +32,19 @@
   padding: 20px;
 }
 
+.stat-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.stat-card-link:hover {
+  border-color: #1b8b4c;
+  box-shadow: 0 8px 20px rgba(27, 139, 76, 0.12);
+  transform: translateY(-1px);
+}
+
 .stat-card span {
   display: block;
   font-size: 13px;
@@ -199,6 +212,51 @@ th {
   background: #f9fafb;
 }
 
+.product-images-field {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.product-images-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.product-images-header strong {
+  font-size: 14px;
+  color: #111827;
+}
+
+.product-image-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.field-error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.product-thumb-strip {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.product-thumb-strip img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
 .description-snippet {
   display: block;
   margin-top: 4px;
@@ -246,4 +304,212 @@ th {
 .actions {
   display: flex;
   gap: 8px;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: #f9fafb;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.detail-card .detail-body {
+  padding: 16px 20px 20px;
+}
+
+.detail-card .detail-body p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.detail-card .detail-body p:last-child {
+  margin-bottom: 0;
+}
+
+.filter-card {
+  margin-bottom: 24px;
+}
+
+.filter-panel {
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filter-chip.active {
+  background: #1b8b4c;
+  border-color: #1b8b4c;
+  color: #fff;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.filter-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.revenue-mode-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px 20px;
+}
+
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.summary-pill {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-pill span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.summary-pill strong {
+  font-size: 20px;
+  color: #111827;
+}
+
+.revenue-mode-select select {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.card-header-meta {
+  float: right;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.pincode-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.pincode-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.pincode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.pincode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.pincode-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pincode-option small {
+  color: #6b7280;
+}
+
+.location-chip {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 13px;
 }

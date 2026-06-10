@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import ProductImage from '@/components/ProductImage';
 import Colors from '@/constants/Colors';
@@ -19,6 +20,7 @@ const statusConfig: Record<
 };
 
 export default function OrdersScreen() {
+  const router = useRouter();
   const { orders, products } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -65,9 +67,15 @@ export default function OrdersScreen() {
         orders.map((order) => {
           const status = statusConfig[order.status] ?? statusConfig.scheduled;
           return (
-            <View
+            <Pressable
               key={order.id}
-              style={[styles.orderCard, shadows.card, { backgroundColor: colors.card }]}>
+              onPress={() => router.push(`/order/${order.id}`)}
+              style={({ pressed }) => [
+                styles.orderCard,
+                shadows.card,
+                { backgroundColor: colors.card },
+                pressed && styles.orderCardPressed,
+              ]}>
               <View style={styles.orderHeader}>
                 <View>
                   <Text style={[styles.orderId, { color: colors.text }]}>{order.id}</Text>
@@ -87,7 +95,11 @@ export default function OrdersScreen() {
                 </Text>
                 <Text style={[styles.orderTotal, { color: colors.text }]}>₹{order.total}</Text>
               </View>
-            </View>
+              <View style={styles.chevronRow}>
+                <Text style={[styles.viewDetails, { color: colors.primary }]}>View items</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              </View>
+            </Pressable>
           );
         })
       )}
@@ -156,6 +168,20 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.lg,
     marginBottom: spacing.md,
+  },
+  orderCardPressed: {
+    opacity: 0.85,
+  },
+  chevronRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 2,
+    marginTop: spacing.sm,
+  },
+  viewDetails: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   orderHeader: {
     flexDirection: 'row',

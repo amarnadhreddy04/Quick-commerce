@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export default function UnavailableLocation({ mode }: Props) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const signOut = useSignOut();
   const { message, areaName, pincode, recheck } = useDeliveryArea();
@@ -56,16 +58,21 @@ export default function UnavailableLocation({ mode }: Props) {
         ) : null}
         {mode === 'unavailable' ? (
           <Text style={[styles.meta, { color: colors.textSecondary }]}>
-            We currently deliver to pincodes: 523201, 522601, 513255
+            We currently deliver to pincodes: 523201, 523157, 522601, 513255
           </Text>
         ) : null}
 
         {mode !== 'loading' ? (
           <>
             <Pressable
-              onPress={() => recheck().catch(() => undefined)}
+              onPress={() => router.push('/profile/address')}
               style={[styles.button, { backgroundColor: colors.primary }]}>
-              <Text style={styles.buttonText}>Check Again</Text>
+              <Text style={styles.buttonText}>Change delivery address</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => recheck().catch(() => undefined)}
+              style={[styles.secondaryButton, { borderColor: colors.border }]}>
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Check again</Text>
             </Pressable>
             <Pressable onPress={() => signOut().catch(() => undefined)} style={styles.secondaryButton}>
               <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Logout & try another account</Text>
@@ -124,6 +131,10 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    borderColor: 'transparent',
   },
   secondaryButtonText: {
     fontWeight: '600',

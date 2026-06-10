@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
+import { useDeliveryAreaOptional } from '@/context/DeliveryAreaContext';
 import {
   AppSettings,
   fetchBanners,
@@ -41,12 +42,14 @@ const defaultSettings: AppSettings = {
   deliverySlot: 'Tomorrow, 6:00 AM – 8:00 AM',
   minOrderValue: 299,
   deliveryFee: 30,
+  walletEnabled: false,
 };
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
   const { token } = useAuth();
+  const pincode = useDeliveryAreaOptional()?.pincode ?? null;
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
@@ -58,16 +61,16 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
 
   const refreshCatalog = useCallback(async () => {
     const [categoriesRes, subRes, productsRes, bannersRes] = await Promise.all([
-      fetchCategories(),
+      fetchCategories(pincode),
       fetchSubCategories(),
-      fetchProducts({ activeOnly: true }),
+      fetchProducts({ activeOnly: true, pincode }),
       fetchBanners(),
     ]);
     setCategories(categoriesRes.categories);
     setSubCategories(subRes.subCategories);
     setProducts(productsRes.products);
     setBanners(bannersRes.banners);
-  }, []);
+  }, [pincode]);
 
   const refreshSettings = useCallback(async () => {
     const { settings: nextSettings } = await fetchSettings();
@@ -105,6 +108,11 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshOrders();
   }, [refreshOrders]);
+
+  useEffect(() => {
+    if (!pincode) return;
+    refreshCatalog().catch(() => undefined);
+  }, [pincode, refreshCatalog]);
 
   useEffect(() => {
     const interval = setInterval(async () => {

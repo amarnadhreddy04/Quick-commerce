@@ -5,6 +5,7 @@ import Categories from './pages/Categories';
 import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import OrderDetail from './pages/OrderDetail';
 import Orders from './pages/Orders';
 import Products from './pages/Products';
 import Settings from './pages/Settings';
@@ -27,6 +28,7 @@ function ProtectedRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="products" element={<Products />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="orders/:orderId" element={<OrderDetail />} />
         <Route path="categories" element={<Categories />} />
         <Route path="customers" element={<Customers />} />
         <Route path="settings" element={<Settings />} />

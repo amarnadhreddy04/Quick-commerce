@@ -5,6 +5,8 @@ export type Category = {
   color: string;
   thumbnail?: string;
   description?: string;
+  pincodes?: string[];
+  allLocations?: boolean;
 };
 
 export type Product = {
@@ -16,14 +18,34 @@ export type Product = {
   mrp?: number;
   unit: string;
   image: string;
+  images?: string[];
   description?: string;
   subscription?: boolean;
   tag?: string;
   stock: number;
   active: boolean;
+  pincodes?: string[];
+  allLocations?: boolean;
+};
+
+export type ServicePincode = {
+  pincode: string;
+  label: string;
+  active: boolean;
 };
 
 export type OrderStatus = 'delivered' | 'scheduled' | 'cancelled' | 'processing' | 'pending_payment';
+
+export type OrderLineItem = {
+  productId: string;
+  productName: string;
+  brand: string;
+  unit: string;
+  image: string;
+  quantity: number;
+  price: number;
+  lineTotal: number;
+};
 
 export type Order = {
   id: string;
@@ -36,6 +58,14 @@ export type Order = {
   deliverySlot: string;
   paymentStatus?: string;
   paymentMethod?: string | null;
+};
+
+export type OrderDetail = Order & {
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  customerLocation?: string | null;
+  customerPincode?: string | null;
+  lineItems: OrderLineItem[];
 };
 
 export type Customer = {
@@ -53,6 +83,7 @@ export type AppSettings = {
   deliverySlot: string;
   minOrderValue: number;
   deliveryFee: number;
+  walletEnabled: boolean;
 };
 
 export type ServiceArea = {

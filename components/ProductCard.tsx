@@ -1,11 +1,12 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import ProductImage from '@/components/ProductImage';
-import QuantityStepper from '@/components/QuantityStepper';
+import ProductCartControls from '@/components/ProductCartControls';
+import ProductImageGallery from '@/components/ProductImageGallery';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
-import { useCart } from '@/context/CartContext';
+import { useProductDetail } from '@/context/ProductDetailContext';
 import { useColorScheme } from '@/components/useColorScheme';
+import { isOutOfStock } from '@/lib/productStock';
 import { Product } from '@/types';
 
 type Props = {
@@ -17,12 +18,12 @@ type Props = {
 export default function ProductCard({ product, onPress, fullWidth = false }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { addItem, updateQuantity, getQuantity } = useCart();
-  const quantity = getQuantity(product.id);
+  const { openProduct } = useProductDetail();
+  const outOfStock = isOutOfStock(product);
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={onPress ?? (() => openProduct(product))}
       style={[
         styles.card,
         fullWidth && styles.cardFullWidth,
@@ -30,7 +31,12 @@ export default function ProductCard({ product, onPress, fullWidth = false }: Pro
         { backgroundColor: colors.card },
       ]}>
       <View style={[styles.imageWrap, { backgroundColor: colors.background }]}>
-        <ProductImage product={product} style={styles.productImage} emojiStyle={styles.emoji} />
+        <ProductImageGallery product={product} style={styles.productImage} emojiStyle={styles.emoji} />
+        {outOfStock ? (
+          <View style={styles.outOfStockOverlay}>
+            <Text style={styles.outOfStockOverlayText}>OUT OF STOCK</Text>
+          </View>
+        ) : null}
         {product.subscription ? (
           <View style={[styles.badge, { backgroundColor: colors.wallet }]}>
             <Text style={[styles.badgeText, { color: colors.primary }]}>Subscribe</Text>
@@ -52,12 +58,7 @@ export default function ProductCard({ product, onPress, fullWidth = false }: Pro
               <Text style={[styles.mrp, { color: colors.textSecondary }]}>₹{product.mrp}</Text>
             ) : null}
           </View>
-          <QuantityStepper
-            quantity={quantity}
-            onIncrease={() => (quantity === 0 ? addItem(product) : updateQuantity(product.id, quantity + 1))}
-            onDecrease={() => updateQuantity(product.id, quantity - 1)}
-            compact
-          />
+          <ProductCartControls product={product} compact />
         </View>
       </View>
     </Pressable>
@@ -100,6 +101,18 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
+  },
+  outOfStockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outOfStockOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   content: {
     padding: spacing.md,

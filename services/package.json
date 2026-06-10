@@ -10,7 +10,7 @@
     "gateway": "node gateway/src/index.js",
     "auth": "node auth-service/src/index.js",
     "catalog": "node catalog-service/src/index.js",
-    "orders": "node order-service/src/index.js",
+    "orders": "node --watch order-service/src/index.js",
     "payments": "node payment-service/src/index.js",
     "users": "node user-service/src/index.js",
     "settings": "node settings-service/src/index.js",

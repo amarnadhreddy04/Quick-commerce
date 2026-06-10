@@ -1,6 +1,14 @@
 import { Platform } from 'react-native';
 
-import type { Category, Order, Product, PromoBanner, SubCategory } from '@/types';
+import type {
+  Category,
+  DeliveryAddress,
+  Order,
+  OrderDetail,
+  Product,
+  PromoBanner,
+  SubCategory,
+} from '@/types';
 
 const DEFAULT_URL =
   Platform.OS === 'android' ? 'http://10.0.2.2:3001/api' : 'http://localhost:3001/api';
@@ -23,6 +31,7 @@ export type AppSettings = {
   deliverySlot: string;
   minOrderValue: number;
   deliveryFee: number;
+  walletEnabled: boolean;
 };
 
 type RequestOptions = {
@@ -56,7 +65,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.error ?? `Request failed (${response.status})`);
+    const detail = data.error ?? `Request failed (${response.status})`;
+    if (response.status === 404 && path.includes('/auth/addresses')) {
+      throw new Error(
+        `${detail}. Restart the API with "npm run server:restart" so address routes are loaded.`
+      );
+    }
+    throw new Error(detail);
   }
 
   return data as T;
@@ -97,8 +112,60 @@ export function meRequest(token: string) {
   return apiRequest<{ user: ApiUser }>('/auth/me', { token });
 }
 
-export function fetchCategories() {
-  return apiRequest<{ categories: Category[] }>('/catalog/categories');
+export function fetchAddresses(token: string) {
+  return apiRequest<{ addresses: DeliveryAddress[] }>('/auth/addresses', { token });
+}
+
+export function createAddress(
+  token: string,
+  payload: {
+    label: string;
+    line1: string;
+    line2?: string;
+    pincode: string;
+    isDefault?: boolean;
+  }
+) {
+  return apiRequest<{ address: DeliveryAddress }>('/auth/addresses', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export function updateAddress(
+  token: string,
+  addressId: string,
+  payload: {
+    label?: string;
+    line1?: string;
+    line2?: string;
+    pincode?: string;
+  }
+) {
+  return apiRequest<{ address: DeliveryAddress }>(
+    `/auth/addresses/${encodeURIComponent(addressId)}`,
+    { method: 'PUT', token, body: payload }
+  );
+}
+
+export function deleteAddress(token: string, addressId: string) {
+  return apiRequest<{ success: boolean }>(
+    `/auth/addresses/${encodeURIComponent(addressId)}`,
+    { method: 'DELETE', token }
+  );
+}
+
+export function activateAddress(token: string, addressId: string) {
+  return apiRequest<{ address: DeliveryAddress }>(
+    `/auth/addresses/${encodeURIComponent(addressId)}/activate`,
+    { method: 'POST', token }
+  );
+}
+
+export function fetchCategories(pincode?: string | null) {
+  const query = pincode ? `?pincode=${encodeURIComponent(pincode)}` : '';
+  return apiRequest<{ categories: Category[] }>(`/catalog/categories${query}`);
 }
 
 export function fetchSubCategories(categoryId?: string) {
@@ -111,10 +178,36 @@ export function fetchBanners(categoryId?: string) {
   return apiRequest<{ banners: PromoBanner[] }>(`/catalog/banners${query}`);
 }
 
-export function fetchProducts(params?: { categoryId?: string; activeOnly?: boolean }) {
+export function fetchStockNotifyStatus(token: string, productId: string) {
+  return apiRequest<{ subscribed: boolean }>(
+    `/catalog/products/${encodeURIComponent(productId)}/stock-notify`,
+    { token }
+  );
+}
+
+export function subscribeStockNotify(token: string, productId: string) {
+  return apiRequest<{ subscribed: boolean; alreadySubscribed?: boolean }>(
+    `/catalog/products/${encodeURIComponent(productId)}/stock-notify`,
+    { method: 'POST', token }
+  );
+}
+
+export function unsubscribeStockNotify(token: string, productId: string) {
+  return apiRequest<{ subscribed: boolean }>(
+    `/catalog/products/${encodeURIComponent(productId)}/stock-notify`,
+    { method: 'DELETE', token }
+  );
+}
+
+export function fetchProducts(params?: {
+  categoryId?: string;
+  activeOnly?: boolean;
+  pincode?: string | null;
+}) {
   const search = new URLSearchParams();
   if (params?.categoryId) search.set('categoryId', params.categoryId);
   if (params?.activeOnly) search.set('activeOnly', 'true');
+  if (params?.pincode) search.set('pincode', params.pincode);
   const query = search.toString() ? `?${search}` : '';
   return apiRequest<{ products: Product[] }>(`/catalog/products${query}`);
 }
@@ -125,6 +218,20 @@ export function fetchSettings() {
 
 export function fetchOrders(token: string) {
   return apiRequest<{ orders: Order[] }>('/orders', { token });
+}
+
+export async function fetchOrder(id: string, token: string) {
+  const encodedId = encodeURIComponent(id);
+
+  try {
+    return await apiRequest<{ order: OrderDetail }>(`/orders?id=${encodedId}`, { token });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (!message.includes('404')) {
+      throw error;
+    }
+    return apiRequest<{ order: OrderDetail }>(`/orders/${encodedId}`, { token });
+  }
 }
 
 export type SyncState = {

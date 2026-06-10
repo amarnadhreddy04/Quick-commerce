@@ -1,8 +1,11 @@
-import { CATEGORY_IMAGES, PRODUCT_IMAGES } from '@/constants/mediaUrls';
+import { CATEGORY_IMAGES, PRODUCT_IMAGE_SETS, PRODUCT_IMAGES } from '@/constants/mediaUrls';
 import { Category, Order, Product, PromoBanner, SubCategory } from '@/types';
 
-const productImage = (id: string, categoryId: keyof typeof CATEGORY_IMAGES) =>
-  PRODUCT_IMAGES[id] ?? CATEGORY_IMAGES[categoryId];
+const productMedia = (id: string, categoryId: keyof typeof CATEGORY_IMAGES) => {
+  const fallback = PRODUCT_IMAGES[id] ?? CATEGORY_IMAGES[categoryId];
+  const images = PRODUCT_IMAGE_SETS[id] ?? [fallback, fallback];
+  return { image: images[0], images };
+};
 
 export const deliveryCutoff = '11:00 PM';
 export const deliverySlot = 'Tomorrow, 6:00 AM – 8:00 AM';
@@ -135,7 +138,7 @@ export const products: Product[] = [
     price: 28,
     mrp: 30,
     unit: '500 ml',
-    image: productImage('p1', 'milk'),
+    ...productMedia('p1', 'milk'),
     subscription: true,
     tag: 'Daily Essential',
   },
@@ -148,7 +151,7 @@ export const products: Product[] = [
     price: 34,
     mrp: 36,
     unit: '500 ml',
-    image: productImage('p2', 'milk'),
+    ...productMedia('p2', 'milk'),
     subscription: true,
   },
   {
@@ -160,7 +163,7 @@ export const products: Product[] = [
     price: 65,
     mrp: 75,
     unit: '500 ml',
-    image: productImage('p13', 'milk'),
+    ...productMedia('p13', 'milk'),
   },
   {
     id: 'p14',
@@ -171,7 +174,7 @@ export const products: Product[] = [
     price: 32,
     mrp: 38,
     unit: '500 ml',
-    image: productImage('p14', 'milk'),
+    ...productMedia('p14', 'milk'),
   },
   {
     id: 'p3',
@@ -182,7 +185,7 @@ export const products: Product[] = [
     price: 45,
     mrp: 50,
     unit: '400 g',
-    image: productImage('p3', 'bread'),
+    ...productMedia('p3', 'bread'),
     tag: 'Fresh Today',
   },
   {
@@ -193,7 +196,7 @@ export const products: Product[] = [
     subCategoryId: 'multigrain',
     price: 55,
     unit: '400 g',
-    image: productImage('p4', 'bread'),
+    ...productMedia('p4', 'bread'),
   },
   {
     id: 'p15',
@@ -204,7 +207,7 @@ export const products: Product[] = [
     price: 40,
     mrp: 45,
     unit: '400 g',
-    image: productImage('p15', 'bread'),
+    ...productMedia('p15', 'bread'),
   },
   {
     id: 'p5',
@@ -215,7 +218,7 @@ export const products: Product[] = [
     price: 72,
     mrp: 80,
     unit: '6 pcs',
-    image: productImage('p5', 'eggs'),
+    ...productMedia('p5', 'eggs'),
     subscription: true,
   },
   {
@@ -227,7 +230,7 @@ export const products: Product[] = [
     price: 85,
     mrp: 95,
     unit: '6 pcs',
-    image: productImage('p16', 'eggs'),
+    ...productMedia('p16', 'eggs'),
   },
   {
     id: 'p6',
@@ -237,7 +240,7 @@ export const products: Product[] = [
     subCategoryId: 'seasonal',
     price: 48,
     unit: '6 pcs',
-    image: productImage('p6', 'fruits'),
+    ...productMedia('p6', 'fruits'),
   },
   {
     id: 'p7',
@@ -248,7 +251,7 @@ export const products: Product[] = [
     price: 120,
     mrp: 140,
     unit: '1 kg',
-    image: productImage('p7', 'fruits'),
+    ...productMedia('p7', 'fruits'),
     tag: '20% Off',
   },
   {
@@ -259,7 +262,7 @@ export const products: Product[] = [
     subCategoryId: 'root',
     price: 32,
     unit: '500 g',
-    image: productImage('p8', 'vegetables'),
+    ...productMedia('p8', 'vegetables'),
   },
   {
     id: 'p9',
@@ -269,7 +272,7 @@ export const products: Product[] = [
     subCategoryId: 'root',
     price: 28,
     unit: '1 kg',
-    image: productImage('p9', 'vegetables'),
+    ...productMedia('p9', 'vegetables'),
   },
   {
     id: 'p17',
@@ -280,7 +283,7 @@ export const products: Product[] = [
     price: 24,
     mrp: 30,
     unit: '250 g',
-    image: productImage('p17', 'vegetables'),
+    ...productMedia('p17', 'vegetables'),
   },
   {
     id: 'p10',
@@ -290,7 +293,7 @@ export const products: Product[] = [
     subCategoryId: 'juice',
     price: 110,
     unit: '1 L',
-    image: productImage('p10', 'beverages'),
+    ...productMedia('p10', 'beverages'),
   },
   {
     id: 'p18',
@@ -301,7 +304,7 @@ export const products: Product[] = [
     price: 145,
     mrp: 165,
     unit: '100 g',
-    image: productImage('p18', 'beverages'),
+    ...productMedia('p18', 'beverages'),
   },
   {
     id: 'p11',
@@ -312,7 +315,7 @@ export const products: Product[] = [
     price: 165,
     mrp: 185,
     unit: '400 g',
-    image: productImage('p11', 'breakfast'),
+    ...productMedia('p11', 'breakfast'),
     tag: 'Healthy',
   },
   {
@@ -324,7 +327,7 @@ export const products: Product[] = [
     price: 210,
     mrp: 240,
     unit: '475 g',
-    image: productImage('p19', 'breakfast'),
+    ...productMedia('p19', 'breakfast'),
   },
   {
     id: 'p12',
@@ -334,7 +337,7 @@ export const products: Product[] = [
     subCategoryId: 'chips',
     price: 20,
     unit: '52 g',
-    image: productImage('p12', 'snacks'),
+    ...productMedia('p12', 'snacks'),
   },
   {
     id: 'p20',
@@ -345,7 +348,7 @@ export const products: Product[] = [
     price: 30,
     mrp: 35,
     unit: '250 g',
-    image: productImage('p20', 'snacks'),
+    ...productMedia('p20', 'snacks'),
   },
 ];
 

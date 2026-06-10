@@ -56,6 +56,7 @@ export const api = {
   deleteCategory: (id: string) =>
     request(`/catalog/categories/${id}`, { method: 'DELETE' }),
   getOrders: () => request<{ orders: unknown[] }>('/orders'),
+  getOrder: (id: string) => request<{ order: unknown }>(`/orders/${id}`),
   updateOrderStatus: (id: string, status: string) =>
     request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   getCustomers: () => request<{ customers: unknown[] }>('/users'),
@@ -71,4 +72,11 @@ export const api = {
     request(`/areas/${id}`, { method: 'PUT', body: JSON.stringify(area) }),
   deleteServiceArea: (id: string) =>
     request(`/areas/${id}`, { method: 'DELETE' }),
+  getPincodes: () => request<{ pincodes: unknown[] }>('/areas/pincodes'),
+  createPincode: (payload: { pincode: string; label: string }) =>
+    request('/areas/pincodes', { method: 'POST', body: JSON.stringify(payload) }),
+  updatePincode: (pincode: string, payload: { label: string; active?: boolean }) =>
+    request(`/areas/pincodes/${pincode}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deletePincode: (pincode: string) =>
+    request(`/areas/pincodes/${pincode}`, { method: 'DELETE' }),
 };

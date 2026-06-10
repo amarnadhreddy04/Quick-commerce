@@ -18,6 +18,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.85.3",
+    "react-native-gesture-handler": "^3.0.0",
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
@@ -37,6 +38,7 @@
     "admin": "npm run dev --prefix admin",
     "admin:build": "npm run build --prefix admin",
     "server": "npm run dev --prefix services",
+    "server:restart": "npx --yes kill-port 3001 3011 3012 3013 3014 3015 3016 3017 3018 && npm run server",
     "server:seed": "npm run seed --prefix services",
     "server:legacy": "npm run dev --prefix server"
   },

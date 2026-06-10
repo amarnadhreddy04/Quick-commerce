@@ -2,11 +2,24 @@ import 'dotenv/config';
 import { Router } from 'express';
 
 import { createServiceApp } from '../../shared/src/createApp.js';
-import { sendRegistrationNotifications } from './services/notifications.js';
+import {
+  sendRegistrationNotifications,
+  sendStockAvailableNotifications,
+} from './services/notifications.js';
 
 const app = createServiceApp('notification-service');
 const PORT = process.env.NOTIFICATION_PORT || 3017;
 const router = Router();
+
+router.post('/stock-available', async (req, res) => {
+  const { name, email, phone, productName } = req.body ?? {};
+  if (!name || !email || !productName) {
+    return res.status(400).json({ error: 'Name, email, and productName are required' });
+  }
+
+  const notifications = await sendStockAvailableNotifications({ name, email, phone, productName });
+  res.json(notifications);
+});
 
 router.post('/registration', async (req, res) => {
   const { name, email, phone } = req.body ?? {};

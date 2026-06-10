@@ -2,21 +2,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import ProductCartControls from '@/components/ProductCartControls';
 import ProductImage from '@/components/ProductImage';
-import QuantityStepper from '@/components/QuantityStepper';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
 import { useCatalog } from '@/context/CatalogContext';
 import { useCart } from '@/context/CartContext';
 import { useColorScheme } from '@/components/useColorScheme';
 import { calculateOrderTotal, freeDeliveryMessage } from '@/lib/cartFees';
+import type { Product } from '@/types';
 
 export default function CartScreen() {
   const router = useRouter();
-  const { settings } = useCatalog();
+  const { settings, products } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { items, subtotal, updateQuantity, getQuantity } = useCart();
+  const { items, subtotal } = useCart();
+  const productById = new Map(products.map((product) => [product.id, product]));
   const deliverySlot = settings.deliverySlot;
 
   if (items.length === 0) {
@@ -45,26 +47,26 @@ export default function CartScreen() {
           </View>
         </View>
 
-        {items.map((item) => (
-          <View
-            key={item.product.id}
-            style={[styles.itemCard, shadows.card, { backgroundColor: colors.card }]}>
-            <View style={styles.itemImageWrap}>
-              <ProductImage product={item.product} style={styles.itemImage} emojiStyle={styles.emoji} />
+        {items.map((item) => {
+          const liveProduct: Product = productById.get(item.product.id) ?? item.product;
+
+          return (
+            <View
+              key={item.product.id}
+              style={[styles.itemCard, shadows.card, { backgroundColor: colors.card }]}>
+              <View style={styles.itemImageWrap}>
+                <ProductImage product={liveProduct} style={styles.itemImage} emojiStyle={styles.emoji} />
+              </View>
+              <View style={styles.itemInfo}>
+                <Text style={[styles.itemBrand, { color: colors.textSecondary }]}>{liveProduct.brand}</Text>
+                <Text style={[styles.itemName, { color: colors.text }]}>{liveProduct.name}</Text>
+                <Text style={[styles.itemUnit, { color: colors.textSecondary }]}>{liveProduct.unit}</Text>
+                <Text style={[styles.itemPrice, { color: colors.text }]}>₹{liveProduct.price * item.quantity}</Text>
+              </View>
+              <ProductCartControls product={liveProduct} compact />
             </View>
-            <View style={styles.itemInfo}>
-              <Text style={[styles.itemBrand, { color: colors.textSecondary }]}>{item.product.brand}</Text>
-              <Text style={[styles.itemName, { color: colors.text }]}>{item.product.name}</Text>
-              <Text style={[styles.itemUnit, { color: colors.textSecondary }]}>{item.product.unit}</Text>
-              <Text style={[styles.itemPrice, { color: colors.text }]}>₹{item.product.price * item.quantity}</Text>
-            </View>
-            <QuantityStepper
-              quantity={getQuantity(item.product.id)}
-              onIncrease={() => updateQuantity(item.product.id, item.quantity + 1)}
-              onDecrease={() => updateQuantity(item.product.id, item.quantity - 1)}
-            />
-          </View>
-        ))}
+          );
+        })}
 
         {deliveryHint ? (
           <View style={[styles.deliveryBanner, { backgroundColor: colors.wallet, borderColor: colors.primary }]}>

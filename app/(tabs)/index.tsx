@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import CategoryGrid from '@/components/CategoryGrid';
+import CategoryPills from '@/components/CategoryPills';
+import CategorySections from '@/components/CategorySections';
 import DeliveryBanner from '@/components/DeliveryBanner';
 import HomeHeader from '@/components/HomeHeader';
 import ProductCard from '@/components/ProductCard';
@@ -34,13 +35,9 @@ export default function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <DeliveryBanner />
         <WalletBanner />
+        <CategoryPills />
 
-        <SectionHeader
-          title="Shop by Category"
-          actionLabel="View all"
-          onAction={() => openCategories()}
-        />
-        <CategoryGrid />
+        <CategorySections onViewAll={() => openCategories()} />
 
         <SectionHeader
           title="Daily Essentials"

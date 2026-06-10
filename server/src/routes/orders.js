@@ -22,7 +22,66 @@ function formatOrder(row) {
   };
 }
 
+function formatOrderDetail(row) {
+  const user = queryOne(
+    'SELECT name, email, phone, location, pincode FROM users WHERE id = ?',
+    [row.user_id]
+  );
+  const lineRows = queryAll(
+    `SELECT oi.product_id, oi.quantity, oi.price, p.name as product_name, p.brand, p.unit, p.image, p.images
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = ?
+     ORDER BY oi.product_id`,
+    [row.id]
+  );
+
+  return {
+    ...formatOrder(row),
+    customerEmail: user?.email ?? null,
+    customerPhone: user?.phone ?? null,
+    customerLocation: user?.location ?? null,
+    customerPincode: user?.pincode ?? null,
+    lineItems: lineRows.map((item) => ({
+      productId: item.product_id,
+      productName: item.product_name ?? item.product_id,
+      brand: item.brand ?? '',
+      unit: item.unit ?? '',
+      image: resolveLineItemImage(item),
+      quantity: item.quantity,
+      price: item.price,
+      lineTotal: item.price * item.quantity,
+    })),
+  };
+}
+
+function resolveLineItemImage(item) {
+  if (item.image) return item.image;
+  try {
+    const images = JSON.parse(item.images || '[]');
+    if (Array.isArray(images) && images[0]) return images[0];
+  } catch {
+    // ignore invalid JSON
+  }
+  return '';
+}
+
 router.get('/', authRequired, (req, res) => {
+  const orderId = typeof req.query.id === 'string' ? req.query.id.trim() : '';
+
+  if (orderId) {
+    const order = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (req.user.role !== 'admin' && order.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    return res.json({ order: formatOrderDetail(order) });
+  }
+
   const rows =
     req.user.role === 'admin'
       ? queryAll('SELECT * FROM orders ORDER BY date DESC')
@@ -59,6 +118,19 @@ router.post('/', authRequired, (req, res) => {
 
   const order = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
   res.status(201).json({ order: formatOrder(order) });
+});
+
+router.get('/:id', authRequired, (req, res) => {
+  const order = queryOne('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+  if (!order) {
+    return res.status(404).json({ error: 'Order not found' });
+  }
+
+  if (req.user.role !== 'admin' && order.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  res.json({ order: formatOrderDetail(order) });
 });
 
 router.patch('/:id/status', authRequired, adminRequired, (req, res) => {

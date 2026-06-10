@@ -1,3 +1,16 @@
+export type DeliveryAddress = {
+  id: string;
+  label: string;
+  line1: string;
+  line2?: string | null;
+  pincode: string;
+  city: string;
+  areaLabel: string;
+  isDefault: boolean;
+  fullAddress: string;
+  createdAt?: string;
+};
+
 export type Category = {
   id: string;
   name: string;
@@ -5,6 +18,7 @@ export type Category = {
   color: string;
   thumbnail: string;
   description?: string;
+  sortOrder?: number;
 };
 
 export type SubCategory = {
@@ -34,9 +48,11 @@ export type Product = {
   mrp?: number;
   unit: string;
   image: string;
+  images?: string[];
   description?: string;
   subscription?: boolean;
   tag?: string;
+  stock?: number;
 };
 
 export type CartItem = {
@@ -51,4 +67,21 @@ export type Order = {
   items: number;
   total: number;
   deliverySlot: string;
+};
+
+export type OrderLineItem = {
+  productId: string;
+  productName: string;
+  brand: string;
+  unit: string;
+  image: string;
+  quantity: number;
+  price: number;
+  lineTotal: number;
+};
+
+export type OrderDetail = Order & {
+  paymentStatus?: string;
+  paymentMethod?: string | null;
+  lineItems: OrderLineItem[];
 };

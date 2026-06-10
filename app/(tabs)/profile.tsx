@@ -1,17 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
+import { useWalletEnabled } from '@/hooks/useWalletEnabled';
 import { useAuth } from '@/context/AuthContext';
+import { useDeliveryArea } from '@/context/DeliveryAreaContext';
 import { useSignOut } from '@/hooks/useSignOut';
+import { getNotificationsEnabled } from '@/lib/notificationPrefs';
 import { useColorScheme } from '@/components/useColorScheme';
 
+type MenuRoute = '/profile/address' | '/profile/wallet' | '/profile/email' | '/profile/notifications' | '/profile/help';
+
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user } = useAuth();
+  const { activeAddress } = useDeliveryArea();
   const signOut = useSignOut();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const walletEnabled = useWalletEnabled();
+  const [notificationsOn, setNotificationsOn] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      getNotificationsEnabled().then(setNotificationsOn).catch(() => undefined);
+    }, [])
+  );
 
   const initials = user?.name
     ?.split(' ')
@@ -20,12 +37,46 @@ export default function ProfileScreen() {
     .slice(0, 2)
     .toUpperCase();
 
-  const menuItems = [
-    { icon: 'location-outline' as const, label: 'Delivery Address', value: user?.location ?? 'Not set' },
-    { icon: 'wallet-outline' as const, label: 'Wallet', value: `₹${(user?.walletBalance ?? 0).toFixed(2)}` },
-    { icon: 'mail-outline' as const, label: 'Email', value: user?.email ?? '' },
-    { icon: 'notifications-outline' as const, label: 'Notifications', value: 'On' },
-    { icon: 'help-circle-outline' as const, label: 'Help & Support', value: '' },
+  const menuItems: Array<{
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    value: string;
+    route: MenuRoute;
+  }> = [
+    {
+      icon: 'location-outline',
+      label: 'Delivery Address',
+      value: activeAddress?.label ?? user?.location ?? 'Not set',
+      route: '/profile/address',
+    },
+    ...(walletEnabled
+      ? [
+          {
+            icon: 'wallet-outline' as const,
+            label: 'Wallet',
+            value: `₹${(user?.walletBalance ?? 0).toFixed(2)}`,
+            route: '/profile/wallet' as const,
+          },
+        ]
+      : []),
+    {
+      icon: 'mail-outline',
+      label: 'Email',
+      value: user?.email ?? '',
+      route: '/profile/email',
+    },
+    {
+      icon: 'notifications-outline',
+      label: 'Notifications',
+      value: notificationsOn ? 'On' : 'Off',
+      route: '/profile/notifications',
+    },
+    {
+      icon: 'help-circle-outline',
+      label: 'Help & Support',
+      value: '',
+      route: '/profile/help',
+    },
   ];
 
   return (
@@ -45,7 +96,9 @@ export default function ProfileScreen() {
       <View style={[styles.menuCard, shadows.card, { backgroundColor: colors.card }]}>
         {menuItems.map((item, index) => (
           <View key={item.label}>
-            <View style={styles.menuRow}>
+            <Pressable
+              style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}
+              onPress={() => router.push(item.route)}>
               <View style={styles.menuLeft}>
                 <Ionicons name={item.icon} size={22} color={colors.primary} />
                 <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
@@ -56,7 +109,7 @@ export default function ProfileScreen() {
                 ) : null}
                 <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
               </View>
-            </View>
+            </Pressable>
             {index < menuItems.length - 1 ? (
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
             ) : null}
@@ -101,6 +154,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
+  },
+  menuRowPressed: {
+    opacity: 0.7,
   },
   menuLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   menuLabel: { fontSize: 15, fontWeight: '500' },

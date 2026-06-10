@@ -1,10 +1,10 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import ProductCartControls from '@/components/ProductCartControls';
 import ProductImage from '@/components/ProductImage';
-import QuantityStepper from '@/components/QuantityStepper';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
-import { useCart } from '@/context/CartContext';
+import { useProductDetail } from '@/context/ProductDetailContext';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Product } from '@/types';
 
@@ -15,11 +15,12 @@ type Props = {
 export default function ProductListItem({ product }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { addItem, updateQuantity, getQuantity } = useCart();
-  const quantity = getQuantity(product.id);
+  const { openProduct } = useProductDetail();
 
   return (
-    <View style={[styles.card, shadows.card, { backgroundColor: colors.card }]}>
+    <Pressable
+      onPress={() => openProduct(product)}
+      style={[styles.card, shadows.card, { backgroundColor: colors.card }]}>
       <View style={[styles.imageWrap, { backgroundColor: colors.background }]}>
         <ProductImage product={product} style={styles.productImage} emojiStyle={styles.emoji} />
       </View>
@@ -44,13 +45,8 @@ export default function ProductListItem({ product }: Props) {
         </View>
       </View>
 
-      <QuantityStepper
-        quantity={quantity}
-        onIncrease={() => (quantity === 0 ? addItem(product) : updateQuantity(product.id, quantity + 1))}
-        onDecrease={() => updateQuantity(product.id, quantity - 1)}
-        compact
-      />
-    </View>
+      <ProductCartControls product={product} compact />
+    </Pressable>
   );
 }
 
