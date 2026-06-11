@@ -6,7 +6,6 @@ import PageHeader from '../components/PageHeader';
 import '../components/shared.css';
 import {
   calculateRevenue,
-  defaultOrderFilters,
   filterOrders,
   filtersFromSearchParams,
   filtersToSearchParams,

@@ -1,4 +1,4 @@
-import type { AppSettings, Category, Customer, Order, Product } from '../types';
+import type { Category } from '../types';
 
 export const seedCategories: Category[] = [
   { id: 'fruits', name: 'Fruits & Vegetables', icon: 'leaf', color: '#DCFCE7' },

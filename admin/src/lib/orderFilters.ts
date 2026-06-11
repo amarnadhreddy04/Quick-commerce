@@ -222,7 +222,7 @@ export function filterOrders(orders: Order[], filters: OrderFilterState): Order[
 export function calculateRevenue(orders: Order[], mode: RevenueMode = 'delivered'): number {
   return orders
     .filter((order) => orderMatchesRevenueMode(order, mode))
-    .reduce((sum, order) => sum + order.total, 0);
+    .reduce((sum, order) => sum + (order.total ?? 0), 0);
 }
 
 export function filtersToSearchParams(filters: OrderFilterState): URLSearchParams {

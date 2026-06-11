@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import LocationLayout from './components/LocationLayout';
 import VendorLayout from './components/VendorLayout';
-import { homePathForRole, isLocationAdmin, isSuperAdmin, isWholesaler } from './lib/roles';
+import { isLocationAdmin, isSuperAdmin, isWholesaler } from './lib/roles';
 import Categories from './pages/Categories';
 import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
@@ -23,12 +23,6 @@ import PromoCodes from './pages/PromoCodes';
 import Referrals from './pages/Referrals';
 import Wholesalers from './pages/Wholesalers';
 import { AdminProvider, useAdminStore } from './store/AdminStore';
-
-function RoleRedirect() {
-  const { user } = useAdminStore();
-  if (!user) return <Navigate to="/login" replace />;
-  return <Navigate to={homePathForRole(user.role)} replace />;
-}
 
 function ProtectedRoutes() {
   const { isAuthenticated, loading, user } = useAdminStore();
@@ -104,7 +98,6 @@ export default function App() {
     <AdminProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<RoleRedirect />} />
         <Route path="/*" element={<ProtectedRoutes />} />
       </Routes>
     </AdminProvider>

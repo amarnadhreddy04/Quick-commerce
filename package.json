@@ -35,7 +35,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "admin": "npm run dev --prefix admin",
+    "admin": "npx --yes kill-port 5173 5174 && npm run dev --prefix admin",
     "admin:build": "npm run build --prefix admin",
     "server": "npm run dev --prefix services",
     "server:restart": "npx --yes kill-port 3001 3011 3012 3013 3014 3015 3016 3017 3018 && npm run server",
