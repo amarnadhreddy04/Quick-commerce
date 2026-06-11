@@ -12,6 +12,7 @@ function formatSettings(row) {
     minOrderValue: row.min_order_value ?? 299,
     deliveryFee: row.delivery_fee ?? 30,
     walletEnabled: row.wallet_enabled === 1,
+    subscriptionEnabled: row.subscription_enabled === 1,
   };
 }
 
@@ -26,9 +27,16 @@ router.get('/', (_req, res) => {
 router.put('/', authRequired, adminRequired, (req, res) => {
   const s = req.body;
   run(
-    `UPDATE app_settings SET delivery_cutoff=?, delivery_slot=?, min_order_value=?, delivery_fee=?, wallet_enabled=?
+    `UPDATE app_settings SET delivery_cutoff=?, delivery_slot=?, min_order_value=?, delivery_fee=?, wallet_enabled=?, subscription_enabled=?
      WHERE id=1`,
-    [s.deliveryCutoff, s.deliverySlot, s.minOrderValue, s.deliveryFee, s.walletEnabled ? 1 : 0]
+    [
+      s.deliveryCutoff,
+      s.deliverySlot,
+      s.minOrderValue,
+      s.deliveryFee,
+      s.walletEnabled ? 1 : 0,
+      s.subscriptionEnabled ? 1 : 0,
+    ]
   );
   const settings = queryOne('SELECT * FROM app_settings WHERE id = 1');
   res.json({ settings: formatSettings(settings) });

@@ -9,6 +9,9 @@ import {
   validateOrderStock,
 } from '../../../shared/src/productStock.js';
 import { publishSyncEvent } from '../../../shared/src/sync/publish.js';
+import { calculateOrderAmount, validateOrderTotals } from '../../../shared/src/orderTotals.js';
+import { incrementPromoUsage } from '../../../shared/src/promoCodes.js';
+import { assignOrderToWholesaler } from '../../../shared/src/wholesalerAssignment.js';
 import {
   createRazorpayOrder,
   getRazorpayKeyId,
@@ -28,6 +31,10 @@ function formatOrder(row) {
     status: row.status,
     items: row.items_count,
     total: row.total,
+    deliveryFee: row.delivery_fee ?? null,
+    platformFee: row.platform_fee ?? null,
+    promoCode: row.promo_code ?? null,
+    promoDiscount: row.promo_discount ?? null,
     deliverySlot: row.delivery_slot,
     paymentStatus: row.payment_status ?? 'pending',
     paymentMethod: row.payment_method ?? null,
@@ -56,17 +63,46 @@ router.get('/config', authRequired, (_req, res) => {
   });
 });
 
-const FREE_DELIVERY_MIN_ORDER = 299;
-const DELIVERY_CHARGE = 30;
-
-function calculateOrderAmount(items) {
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = subtotal >= FREE_DELIVERY_MIN_ORDER ? 0 : DELIVERY_CHARGE;
-  return { subtotal, deliveryFee, total: subtotal + deliveryFee };
+function insertOrderRow({
+  orderId,
+  userId,
+  date,
+  status,
+  total,
+  deliverySlot,
+  itemCount,
+  expected,
+  paymentStatus,
+  paymentMethod,
+  razorpayOrderId = null,
+  razorpayPaymentId = null,
+}) {
+  run(
+    `INSERT INTO orders (id, user_id, date, status, total, delivery_slot, items_count, delivery_fee, platform_fee, promo_code, promo_discount, payment_status, payment_method, razorpay_order_id, razorpay_payment_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      orderId,
+      userId,
+      date,
+      status,
+      total,
+      deliverySlot,
+      itemCount,
+      expected.deliveryFee,
+      expected.platformFee,
+      expected.promoCode,
+      expected.promoDiscount ?? 0,
+      paymentStatus,
+      paymentMethod,
+      razorpayOrderId,
+      razorpayPaymentId,
+    ]
+  );
 }
 
 router.post('/create-order', authRequired, async (req, res) => {
-  const { items, deliverySlot, total, deliveryFee, paymentMethod: rawMethod } = req.body;
+  const { items, deliverySlot, total, deliveryFee, platformFee, promoCode, promoDiscount, paymentMethod: rawMethod } =
+    req.body;
   const paymentMethod = String(rawMethod ?? '').toLowerCase();
 
   if (!items?.length || !total) {
@@ -78,11 +114,17 @@ router.post('/create-order', authRequired, async (req, res) => {
     return res.status(400).json({ error: stockCheck.error });
   }
 
-  const expected = calculateOrderAmount(items);
-  if (Math.abs(total - expected.total) > 0.01 || (deliveryFee ?? 0) !== expected.deliveryFee) {
-    return res.status(400).json({
-      error: `Order total mismatch. Expected ₹${expected.total} (delivery fee ₹${expected.deliveryFee})`,
-    });
+  const expected = calculateOrderAmount(items, null, promoCode ? { code: promoCode } : null);
+  if (expected.error) {
+    return res.status(400).json({ error: expected.error });
+  }
+
+  const totalsError = validateOrderTotals(
+    { total, deliveryFee, platformFee, promoCode, promoDiscount: expected.promoDiscount },
+    items
+  );
+  if (totalsError) {
+    return res.status(400).json({ error: totalsError });
   }
 
   const user = queryOne('SELECT * FROM users WHERE id = ?', [req.user.id]);
@@ -95,11 +137,18 @@ router.post('/create-order', authRequired, async (req, res) => {
 
   if (paymentMethod === 'cod') {
     transaction(() => {
-      run(
-        `INSERT INTO orders (id, user_id, date, status, total, delivery_slot, items_count, payment_status, payment_method, razorpay_order_id, razorpay_payment_id)
-         VALUES (?, ?, ?, 'scheduled', ?, ?, ?, 'cod', 'cod', NULL, NULL)`,
-        [orderId, req.user.id, date, total, deliverySlot, items.length]
-      );
+      insertOrderRow({
+        orderId,
+        userId: req.user.id,
+        date,
+        status: 'scheduled',
+        total,
+        deliverySlot,
+        itemCount: items.length,
+        expected,
+        paymentStatus: 'pending',
+        paymentMethod: 'cod',
+      });
       items.forEach((item) => {
         run(
           'INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
@@ -109,6 +158,8 @@ router.post('/create-order', authRequired, async (req, res) => {
       decrementStockForItems(items);
     });
 
+    if (expected.promoCode) incrementPromoUsage(expected.promoCode);
+    await assignOrderToWholesaler(orderId, req.user.id);
     const order = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
     await Promise.all([
       publishSyncEvent({ domain: 'orders', action: 'created', entity: 'order', id: orderId }),
@@ -130,11 +181,18 @@ router.post('/create-order', authRequired, async (req, res) => {
 
     transaction(() => {
       run('UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?', [total, req.user.id]);
-      run(
-        `INSERT INTO orders (id, user_id, date, status, total, delivery_slot, items_count, payment_status, payment_method, razorpay_order_id, razorpay_payment_id)
-         VALUES (?, ?, ?, 'scheduled', ?, ?, ?, 'paid', 'wallet', NULL, NULL)`,
-        [orderId, req.user.id, date, total, deliverySlot, items.length]
-      );
+      insertOrderRow({
+        orderId,
+        userId: req.user.id,
+        date,
+        status: 'scheduled',
+        total,
+        deliverySlot,
+        itemCount: items.length,
+        expected,
+        paymentStatus: 'paid',
+        paymentMethod: 'wallet',
+      });
       items.forEach((item) => {
         run(
           'INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
@@ -144,6 +202,8 @@ router.post('/create-order', authRequired, async (req, res) => {
       decrementStockForItems(items);
     });
 
+    if (expected.promoCode) incrementPromoUsage(expected.promoCode);
+    await assignOrderToWholesaler(orderId, req.user.id);
     const order = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
     await Promise.all([
       publishSyncEvent({ domain: 'orders', action: 'created', entity: 'order', id: orderId }),
@@ -162,11 +222,19 @@ router.post('/create-order', authRequired, async (req, res) => {
   });
 
   transaction(() => {
-    run(
-      `INSERT INTO orders (id, user_id, date, status, total, delivery_slot, items_count, payment_status, payment_method, razorpay_order_id)
-       VALUES (?, ?, ?, 'pending_payment', ?, ?, ?, 'pending', 'razorpay', ?)`,
-      [orderId, req.user.id, date, total, deliverySlot, items.length, razorpayOrder.id]
-    );
+    insertOrderRow({
+      orderId,
+      userId: req.user.id,
+      date,
+      status: 'pending_payment',
+      total,
+      deliverySlot,
+      itemCount: items.length,
+      expected,
+      paymentStatus: 'pending',
+      paymentMethod: 'razorpay',
+      razorpayOrderId: razorpayOrder.id,
+    });
     items.forEach((item) => {
       run(
         'INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
@@ -187,7 +255,10 @@ router.post('/create-order', authRequired, async (req, res) => {
       email: user.email,
       phone: user.phone,
     },
-    deliveryFee: deliveryFee ?? 0,
+    deliveryFee: expected.deliveryFee,
+    platformFee: expected.platformFee,
+    promoCode: expected.promoCode,
+    promoDiscount: expected.promoDiscount,
   });
 });
 
@@ -233,13 +304,15 @@ router.post('/verify', authRequired, async (req, res) => {
 
   transaction(() => {
     run(
-      `UPDATE orders SET payment_status = 'paid', status = 'scheduled', razorpay_payment_id = ?, payment_method = 'razorpay'
+      `UPDATE orders SET payment_status = 'paid', razorpay_payment_id = ?, payment_method = 'razorpay'
        WHERE id = ?`,
       [razorpayPaymentId, orderId]
     );
     decrementStockForItems(lineItems);
   });
 
+  if (order.promo_code) incrementPromoUsage(order.promo_code);
+  await assignOrderToWholesaler(orderId, order.user_id);
   const updated = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
   await Promise.all([
     publishSyncEvent({ domain: 'orders', action: 'updated', entity: 'order', id: orderId }),

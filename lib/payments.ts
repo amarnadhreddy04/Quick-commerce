@@ -14,6 +14,9 @@ export type CreatePaymentOrderPayload = {
   deliverySlot: string;
   total: number;
   deliveryFee: number;
+  platformFee: number;
+  promoCode?: string;
+  promoDiscount?: number;
   paymentMethod: 'razorpay' | 'wallet' | 'cod';
 };
 

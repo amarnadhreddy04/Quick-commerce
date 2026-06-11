@@ -1,24 +1,26 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import { useAdminStore } from '../store/AdminStore';
 import './Login.css';
 
 export default function Login() {
-  const { login, isAuthenticated } = useAdminStore();
+  const navigate = useNavigate();
+  const { login, isAuthenticated, user } = useAdminStore();
   const [email, setEmail] = useState('admin@milkbasket.com');
   const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
 
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+  if (isAuthenticated && user) {
+    return <Navigate to={user.role === 'wholesaler' ? '/vendor' : '/'} replace />;
   }
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
     try {
-      await login(email, password);
+      const path = await login(email, password);
+      navigate(path);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid email or password');
     }
@@ -29,8 +31,8 @@ export default function Login() {
       <form className="login-card" onSubmit={handleSubmit}>
         <div className="login-brand">
           <span>🥛</span>
-          <h1>Milkbasket Admin</h1>
-          <p>Manage products, orders, and customers</p>
+          <h1>Milkbasket Panel</h1>
+          <p>Super Admin · Location Admin · Wholesaler</p>
         </div>
 
         <label>
@@ -59,7 +61,14 @@ export default function Login() {
           Sign In
         </button>
 
-        <p className="login-hint">Demo: admin@milkbasket.com / admin123</p>
+        <div className="login-hint">
+          <p>Super Admin: admin@milkbasket.com / admin123</p>
+          <p>Location Admin: addanki-admin@milkbasket.com / location123</p>
+          <p>General Store: ravi.wholesale@example.com / vendor123</p>
+          <p>Vegetable Store: addanki-veg@example.com / vendor123</p>
+          <p>Milk &amp; Bread: addanki-milk@example.com / vendor123</p>
+          <p>Riders use the mobile app: suresh.rider@example.com / rider123</p>
+        </div>
       </form>
     </div>
   );

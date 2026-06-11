@@ -223,6 +223,78 @@ export async function sendStockAvailableNotifications({ name, email, phone, prod
   return results;
 }
 
+export async function sendVendorOrderNotification({
+  name,
+  email,
+  phone,
+  shopName,
+  orderId,
+  pincode,
+  itemCount,
+  wholesaleCost,
+  storeType,
+}) {
+  const transport = await createMailTransport();
+  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@milkbasket.com>`;
+  const storeLabel =
+    storeType === 'vegetables'
+      ? 'Vegetable Store'
+      : storeType === 'milk_bread'
+        ? 'Milk & Bread Store'
+        : 'General Store';
+
+  const subject = `New packing order ${orderId} — ${shopName}`;
+  const text = [
+    `Hi ${name},`,
+    '',
+    `A new order has been assigned to ${shopName} (${storeLabel}).`,
+    `Order: ${orderId}`,
+    `Pincode: ${pincode ?? '—'}`,
+    `Items to pack: ${itemCount}`,
+    `Your payout for this task: ₹${wholesaleCost}`,
+    '',
+    'Please pack the items and mark them ready in your vendor portal.',
+    `Team ${APP_NAME}`,
+  ].join('\n');
+
+  try {
+    const info = await transport.sendMail({
+      from,
+      to: email || undefined,
+      subject,
+      text,
+      html: `<div style="font-family:Arial,sans-serif;max-width:520px;">
+        <h2 style="color:#1B8B4C;">New order for ${shopName}</h2>
+        <p>Hi <strong>${name}</strong>,</p>
+        <p>A new <strong>${storeLabel}</strong> packing task is waiting.</p>
+        <p><strong>Order:</strong> ${orderId}<br/>
+        <strong>Pincode:</strong> ${pincode ?? '—'}<br/>
+        <strong>Items:</strong> ${itemCount}<br/>
+        <strong>Your payout:</strong> ₹${wholesaleCost}</p>
+      </div>`,
+    });
+    const preview = nodemailer.getTestMessageUrl(info);
+    if (preview) console.log('[Email] Vendor order preview URL:', preview);
+  } catch (error) {
+    console.error('[Email] Vendor order notify failed:', error.message);
+  }
+
+  const smsMessage = `${shopName}: new order ${orderId} (${itemCount} items, payout ₹${wholesaleCost}). Pack now in Milkbasket vendor portal.`;
+  if (phone) {
+    try {
+      if (process.env.FAST2SMS_API_KEY) {
+        await sendSmsViaFast2SMS(phone, smsMessage);
+      } else {
+        console.log('[SMS] Vendor order dev mode:', smsMessage);
+      }
+    } catch (error) {
+      console.error('[SMS] Vendor order notify failed:', error.message);
+    }
+  }
+
+  return { success: true };
+}
+
 export async function sendRegistrationNotifications({ name, email, phone }) {
   const results = { email: null, sms: null, errors: [] };
 

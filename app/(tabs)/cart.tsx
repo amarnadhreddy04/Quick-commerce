@@ -1,25 +1,51 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import ProductCartControls from '@/components/ProductCartControls';
 import ProductImage from '@/components/ProductImage';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useCatalog } from '@/context/CatalogContext';
 import { useCart } from '@/context/CartContext';
 import { useColorScheme } from '@/components/useColorScheme';
+import { validatePromoCode } from '@/lib/api';
 import { calculateOrderTotal, freeDeliveryMessage } from '@/lib/cartFees';
 import type { Product } from '@/types';
 
 export default function CartScreen() {
   const router = useRouter();
+  const { token } = useAuth();
   const { settings, products } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { items, subtotal } = useCart();
+  const { items, subtotal, appliedPromo, applyPromo, removePromo } = useCart();
+  const [promoInput, setPromoInput] = useState('');
+  const [promoError, setPromoError] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
   const productById = new Map(products.map((product) => [product.id, product]));
   const deliverySlot = settings.deliverySlot;
+
+  useEffect(() => {
+    if (!appliedPromo || !token || items.length === 0) return;
+    validatePromoCode(token, appliedPromo.code, subtotal)
+      .then((result) => {
+        if (result.discount !== appliedPromo.discount) {
+          applyPromo({ code: result.code, discount: result.discount });
+        }
+      })
+      .catch(() => removePromo());
+  }, [subtotal, appliedPromo, token, items.length, applyPromo, removePromo]);
 
   if (items.length === 0) {
     return (
@@ -33,8 +59,32 @@ export default function CartScreen() {
     );
   }
 
-  const { deliveryFee, total } = calculateOrderTotal(subtotal);
-  const deliveryHint = freeDeliveryMessage(subtotal);
+  const { deliveryFee, platformFee, promoDiscount, total } = calculateOrderTotal(
+    subtotal,
+    settings,
+    appliedPromo?.discount ?? 0
+  );
+  const deliveryHint = freeDeliveryMessage(subtotal, settings);
+
+  const handleApplyPromo = async () => {
+    if (!token) return;
+    const code = promoInput.trim();
+    if (!code) {
+      setPromoError('Enter a promo code');
+      return;
+    }
+    setPromoLoading(true);
+    setPromoError('');
+    try {
+      const result = await validatePromoCode(token, code, subtotal);
+      applyPromo({ code: result.code, discount: result.discount });
+      setPromoInput('');
+    } catch (err) {
+      setPromoError(err instanceof Error ? err.message : 'Invalid promo code');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -75,14 +125,71 @@ export default function CartScreen() {
           </View>
         ) : null}
 
+        <View style={[styles.promoCard, shadows.card, { backgroundColor: colors.card }]}>
+          <Text style={[styles.promoTitle, { color: colors.text }]}>Promo code</Text>
+          {appliedPromo ? (
+            <View style={styles.promoAppliedRow}>
+              <View style={styles.promoAppliedInfo}>
+                <Ionicons name="pricetag" size={18} color={colors.success} />
+                <Text style={[styles.promoAppliedCode, { color: colors.text }]}>{appliedPromo.code}</Text>
+                <Text style={[styles.promoAppliedDiscount, { color: colors.success }]}>
+                  -₹{appliedPromo.discount}
+                </Text>
+              </View>
+              <Pressable onPress={removePromo}>
+                <Text style={[styles.promoRemove, { color: colors.primary }]}>Remove</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.promoInputRow}>
+              <TextInput
+                value={promoInput}
+                onChangeText={(text) => {
+                  setPromoInput(text);
+                  if (promoError) setPromoError('');
+                }}
+                placeholder="e.g. WELCOME50"
+                placeholderTextColor={colors.textSecondary}
+                autoCapitalize="characters"
+                style={[
+                  styles.promoInput,
+                  { color: colors.text, borderColor: colors.border, backgroundColor: colors.background },
+                ]}
+              />
+              <Pressable
+                onPress={handleApplyPromo}
+                disabled={promoLoading}
+                style={[styles.promoApplyBtn, { backgroundColor: colors.primary, opacity: promoLoading ? 0.7 : 1 }]}>
+                {promoLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.promoApplyText}>Apply</Text>
+                )}
+              </Pressable>
+            </View>
+          )}
+          {promoError ? <Text style={[styles.promoError, { color: colors.danger }]}>{promoError}</Text> : null}
+        </View>
+
         <View style={[styles.summary, shadows.card, { backgroundColor: colors.card }]}>
           <SummaryRow label="Subtotal" value={`₹${subtotal}`} colors={colors} />
+          {promoDiscount > 0 ? (
+            <SummaryRow
+              label={`Promo (${appliedPromo?.code})`}
+              value={`-₹${promoDiscount}`}
+              colors={colors}
+              highlight
+            />
+          ) : null}
           <SummaryRow
             label="Delivery Fee"
             value={deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
             colors={colors}
             highlight={deliveryFee === 0}
           />
+          {platformFee > 0 ? (
+            <SummaryRow label="Platform Fee" value={`₹${platformFee}`} colors={colors} />
+          ) : null}
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <SummaryRow label="Total" value={`₹${total}`} colors={colors} bold />
         </View>
@@ -161,6 +268,32 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
   },
+  promoCard: { padding: spacing.lg, borderRadius: radius.lg, gap: spacing.sm },
+  promoTitle: { fontSize: 15, fontWeight: '700' },
+  promoInputRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
+  promoInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  promoApplyBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    minWidth: 72,
+    alignItems: 'center',
+  },
+  promoApplyText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  promoAppliedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  promoAppliedInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  promoAppliedCode: { fontSize: 14, fontWeight: '700' },
+  promoAppliedDiscount: { fontSize: 14, fontWeight: '700' },
+  promoRemove: { fontSize: 13, fontWeight: '600' },
+  promoError: { fontSize: 12, marginTop: 2 },
   summary: { padding: spacing.lg, borderRadius: radius.lg, gap: spacing.sm },
   deliveryHint: { flex: 1, fontSize: 14, lineHeight: 20, fontWeight: '500' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

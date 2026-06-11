@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -28,12 +28,10 @@ import {
 import { useColorScheme } from '@/components/useColorScheme';
 
 type PaymentMethod = 'razorpay' | 'wallet' | 'cod';
-type CheckoutStep = 'review' | 'demo-pay' | 'success';
+type CheckoutStep = 'review' | 'demo-pay';
 
-type SuccessInfo = {
-  message: string;
-  orderId?: string;
-};
+const ORDER_SUCCESS_MESSAGE =
+  'Thank you for your order! We will deliver tomorrow between 6:00 AM and 9:00 AM.';
 
 function isInstantOrder(
   result: RazorpayCheckoutData | WalletOrderResult | CodOrderResult
@@ -50,7 +48,7 @@ export default function CheckoutScreen() {
   const method = (params.method ?? 'cod') as PaymentMethod;
   const { token } = useAuth();
   const { settings, refreshCatalog, refreshOrders } = useCatalog();
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal, appliedPromo } = useCart();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const walletEnabled = useWalletEnabled();
@@ -58,11 +56,13 @@ export default function CheckoutScreen() {
   const [step, setStep] = useState<CheckoutStep>('review');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successInfo, setSuccessInfo] = useState<SuccessInfo | null>(null);
   const [checkoutData, setCheckoutData] = useState<RazorpayCheckoutData | null>(null);
-  const initialItemCount = useRef(items.length);
 
-  const { deliveryFee, total } = calculateOrderTotal(subtotal);
+  const { deliveryFee, platformFee, promoDiscount, total } = calculateOrderTotal(
+    subtotal,
+    settings,
+    appliedPromo?.discount ?? 0
+  );
   const deliverySlot = settings.deliverySlot;
 
   const methodLabel = useMemo(() => {
@@ -70,13 +70,6 @@ export default function CheckoutScreen() {
     if (method === 'wallet') return 'Wallet';
     return 'Demo Pay';
   }, [method]);
-
-  useEffect(() => {
-    if (step === 'success') return;
-    if (initialItemCount.current === 0 && items.length === 0) {
-      router.replace('/(tabs)/cart');
-    }
-  }, [items.length, router, step]);
 
   useEffect(() => {
     if (!walletEnabled && method === 'wallet') {
@@ -93,14 +86,21 @@ export default function CheckoutScreen() {
     deliverySlot,
     total: Number(total),
     deliveryFee: Number(deliveryFee),
+    platformFee: Number(platformFee),
+    promoCode: appliedPromo?.code,
+    promoDiscount: Number(promoDiscount),
     paymentMethod: method,
   });
 
   const goToSuccess = (message: string, orderId?: string) => {
-    setSuccessInfo({ message, orderId });
-    setStep('success');
     Promise.all([refreshOrders(), refreshCatalog()]).catch(() => undefined);
-    clearCart();
+    router.replace({
+      pathname: '/order-success',
+      params: {
+        message,
+        orderId: orderId ?? '',
+      },
+    });
   };
 
   const handleConfirm = async () => {
@@ -130,8 +130,8 @@ export default function CheckoutScreen() {
 
         const message =
           result.paymentMethod === 'cod'
-            ? 'Thank you for your order! We will deliver your products tomorrow morning. Please keep cash ready at delivery.'
-            : 'Thank you for your order! Payment was deducted from your wallet. We will deliver your products tomorrow morning.';
+            ? `${ORDER_SUCCESS_MESSAGE} Please keep cash ready at delivery.`
+            : ORDER_SUCCESS_MESSAGE;
 
         goToSuccess(message, orderId);
         return;
@@ -160,10 +160,7 @@ export default function CheckoutScreen() {
         razorpaySignature: 'demo_signature',
       });
 
-      goToSuccess(
-        'Thank you for your order! We will deliver your products tomorrow morning.',
-        checkoutData.orderId
-      );
+      goToSuccess(ORDER_SUCCESS_MESSAGE, checkoutData.orderId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment verification failed.');
     } finally {
@@ -171,7 +168,7 @@ export default function CheckoutScreen() {
     }
   };
 
-  if (items.length === 0 && step !== 'success') {
+  if (items.length === 0) {
     return null;
   }
 
@@ -179,39 +176,12 @@ export default function CheckoutScreen() {
     <>
       <Stack.Screen
         options={{
-          title: step === 'success' ? 'Order Placed' : 'Checkout',
+          title: 'Checkout',
           headerBackTitle: 'Payment',
-          headerBackVisible: step !== 'success',
         }}
       />
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
-        {step === 'success' && successInfo ? (
-          <View style={styles.successContainer}>
-            <View style={[styles.successIcon, { backgroundColor: colors.wallet }]}>
-              <Ionicons name="checkmark-circle" size={80} color={colors.primary} />
-            </View>
-            <Text style={[styles.successTitle, { color: colors.text }]}>Thank You!</Text>
-            {successInfo.orderId ? (
-              <Text style={[styles.successOrderId, { color: colors.textSecondary }]}>
-                Order ID: {successInfo.orderId}
-              </Text>
-            ) : null}
-            <Text style={[styles.successMessage, { color: colors.textSecondary }]}>
-              {successInfo.message}
-            </Text>
-            <Text style={[styles.successSlot, { color: colors.text }]}>
-              Delivery: {deliverySlot}
-            </Text>
-            <Pressable
-              onPress={() => router.replace('/(tabs)/orders')}
-              style={[styles.primaryButton, { backgroundColor: colors.primary }]}>
-              <Text style={styles.primaryButtonText}>View My Orders</Text>
-            </Pressable>
-            <Pressable onPress={() => router.replace('/(tabs)')} style={styles.secondaryLink}>
-              <Text style={[styles.secondaryLinkText, { color: colors.primary }]}>Continue Shopping</Text>
-            </Pressable>
-          </View>
-        ) : step === 'review' ? (
+        {step === 'review' ? (
           <ScrollView contentContainerStyle={styles.content}>
             <View style={[styles.methodBadge, { backgroundColor: colors.wallet, borderColor: colors.primary }]}>
               <Ionicons
@@ -233,12 +203,26 @@ export default function CheckoutScreen() {
                 </View>
               ))}
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              {promoDiscount > 0 ? (
+                <View style={styles.row}>
+                  <Text style={[styles.rowName, { color: colors.textSecondary }]}>
+                    Promo ({appliedPromo?.code})
+                  </Text>
+                  <Text style={[styles.rowValue, { color: colors.success }]}>-₹{promoDiscount}</Text>
+                </View>
+              ) : null}
               <View style={styles.row}>
                 <Text style={[styles.rowName, { color: colors.textSecondary }]}>Delivery fee</Text>
                 <Text style={[styles.rowValue, { color: colors.text }]}>
                   {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
                 </Text>
               </View>
+              {platformFee > 0 ? (
+                <View style={styles.row}>
+                  <Text style={[styles.rowName, { color: colors.textSecondary }]}>Platform fee</Text>
+                  <Text style={[styles.rowValue, { color: colors.text }]}>₹{platformFee}</Text>
+                </View>
+              ) : null}
               <View style={styles.row}>
                 <Text style={[styles.totalLabel, { color: colors.text }]}>Total</Text>
                 <Text style={[styles.totalValue, { color: colors.text }]}>₹{total}</Text>
@@ -367,23 +351,4 @@ const styles = StyleSheet.create({
   demoHint: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
   secondaryLink: { marginTop: spacing.md },
   secondaryLinkText: { fontSize: 15, fontWeight: '600' },
-  successContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xxl,
-    gap: spacing.md,
-  },
-  successIcon: {
-    width: 120,
-    height: 120,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  successTitle: { fontSize: 30, fontWeight: '800' },
-  successOrderId: { fontSize: 14, fontWeight: '600' },
-  successMessage: { fontSize: 16, textAlign: 'center', lineHeight: 24 },
-  successSlot: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
 });

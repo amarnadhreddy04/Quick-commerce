@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { TERMS_VERSION } from '@/constants/terms';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -33,6 +34,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ ref?: string }>();
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
@@ -44,12 +46,19 @@ export default function RegisterScreen() {
   const [pincode, setPincode] = useState('');
   const [location, setLocation] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successNote, setSuccessNote] = useState('');
   const [lookingUpPincode, setLookingUpPincode] = useState(false);
   const [locationError, setLocationError] = useState('');
   const lastLookupRef = useRef('');
+
+  useEffect(() => {
+    const incoming = params.ref?.trim().toUpperCase();
+    if (incoming) setReferralCode(incoming);
+  }, [params.ref]);
 
   const resolvePincode = async (value: string) => {
     const pincodeError = validatePincode(value);
@@ -137,6 +146,11 @@ export default function RegisterScreen() {
       return;
     }
 
+    if (!acceptedTerms) {
+      setError('Please accept the Terms & Conditions to create an account');
+      return;
+    }
+
     setLoading(true);
     try {
       const notifications = await register({
@@ -146,6 +160,9 @@ export default function RegisterScreen() {
         location: location.trim(),
         pincode,
         password,
+        acceptedTerms: true,
+        termsVersion: TERMS_VERSION,
+        referralCode: referralCode.trim() || undefined,
       });
 
       const notes = [];
@@ -277,6 +294,22 @@ export default function RegisterScreen() {
           </View>
 
           <View>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Referral code (optional)</Text>
+            <TextInput
+              value={referralCode}
+              onChangeText={(value) => setReferralCode(value.toUpperCase().replace(/\s/g, ''))}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              placeholder="Friend's code"
+              placeholderTextColor={colors.textSecondary}
+              style={[
+                styles.input,
+                { color: colors.text, borderColor: colors.border, backgroundColor: colors.background },
+              ]}
+            />
+          </View>
+
+          <View>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
             <TextInput
               value={password}
@@ -292,17 +325,44 @@ export default function RegisterScreen() {
             />
           </View>
 
+          <View style={styles.termsRow}>
+            <Pressable
+              onPress={() => setAcceptedTerms((value) => !value)}
+              hitSlop={8}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: acceptedTerms }}>
+              <View
+                style={[
+                  styles.checkbox,
+                  {
+                    borderColor: acceptedTerms ? colors.primary : colors.border,
+                    backgroundColor: acceptedTerms ? colors.primary : colors.background,
+                  },
+                ]}>
+                {acceptedTerms ? <Ionicons name="checkmark" size={14} color="#FFFFFF" /> : null}
+              </View>
+            </Pressable>
+            <Text style={[styles.termsText, { color: colors.text }]}>
+              I agree to the{' '}
+              <Link href="/(auth)/terms" asChild>
+                <Pressable>
+                  <Text style={[styles.termsLink, { color: colors.primary }]}>Terms & Conditions</Text>
+                </Pressable>
+              </Link>
+            </Text>
+          </View>
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {successNote ? <Text style={[styles.success, { color: colors.primary }]}>{successNote}</Text> : null}
 
           <Pressable
             onPress={handleRegister}
-            disabled={loading || lookingUpPincode}
+            disabled={loading || lookingUpPincode || !acceptedTerms}
             style={[
               styles.button,
               {
                 backgroundColor: colors.primary,
-                opacity: loading || lookingUpPincode ? 0.7 : 1,
+                opacity: loading || lookingUpPincode || !acceptedTerms ? 0.7 : 1,
               },
             ]}>
             {loading ? (
@@ -377,6 +437,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: spacing.xs,
   },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.sm,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  termsText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  termsLink: { fontWeight: '700' },
   error: { color: '#EF4444', fontSize: 13, marginTop: spacing.sm },
   success: { fontSize: 13, marginTop: spacing.sm, fontWeight: '600' },
   button: {

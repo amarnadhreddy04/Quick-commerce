@@ -9,6 +9,7 @@ import { radius, shadows, spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/components/useColorScheme';
 import { fetchOrder } from '@/lib/api';
+import { formatPaymentMethod, formatPaymentStatus } from '@/lib/paymentLabels';
 import type { Order, OrderDetail } from '@/types';
 
 const statusConfig: Record<
@@ -72,7 +73,14 @@ export default function OrderDetailScreen() {
   const status = statusConfig[order.status] ?? statusConfig.scheduled;
   const hasLineItems = order.lineItems.length > 0;
   const subtotal = order.lineItems.reduce((sum, item) => sum + item.lineTotal, 0);
-  const deliveryFee = hasLineItems ? Math.max(0, order.total - subtotal) : 0;
+  const platformFee = order.platformFee ?? 0;
+  const promoDiscount = order.promoDiscount ?? 0;
+  const deliveryFee =
+    order.deliveryFee != null
+      ? order.deliveryFee
+      : hasLineItems
+        ? Math.max(0, order.total - subtotal + promoDiscount - platformFee)
+        : 0;
 
   return (
     <>
@@ -96,10 +104,18 @@ export default function OrderDetailScreen() {
 
           <DetailRow label="Delivery slot" value={order.deliverySlot} colors={colors} />
           {order.paymentMethod ? (
-            <DetailRow label="Payment method" value={order.paymentMethod} colors={colors} />
+            <DetailRow
+              label="Payment method"
+              value={formatPaymentMethod(order.paymentMethod)}
+              colors={colors}
+            />
           ) : null}
           {order.paymentStatus ? (
-            <DetailRow label="Payment status" value={order.paymentStatus} colors={colors} />
+            <DetailRow
+              label="Payment status"
+              value={formatPaymentStatus(order.paymentStatus, order.paymentMethod)}
+              colors={colors}
+            />
           ) : null}
         </View>
 
@@ -145,12 +161,23 @@ export default function OrderDetailScreen() {
           {hasLineItems ? (
             <>
               <TotalRow label="Subtotal" value={`₹${subtotal}`} colors={colors} />
+              {promoDiscount > 0 ? (
+                <TotalRow
+                  label={`Promo (${order.promoCode})`}
+                  value={`-₹${promoDiscount}`}
+                  colors={colors}
+                  highlight
+                />
+              ) : null}
               <TotalRow
                 label="Delivery fee"
                 value={deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
                 colors={colors}
                 highlight={deliveryFee === 0}
               />
+              {platformFee > 0 ? (
+                <TotalRow label="Platform fee" value={`₹${platformFee}`} colors={colors} />
+              ) : null}
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
             </>
           ) : null}

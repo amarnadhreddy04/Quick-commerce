@@ -37,10 +37,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   login: (email: string, password: string) =>
-    request<{ token: string; user: { role: string } }>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+    request<{ token: string; user: { role: string; name: string; adminPincode?: string | null; wholesalerId?: string | null } }>(
+      '/auth/login',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      }
+    ),
+  getMe: () => request<{ user: { role: string; name: string; adminPincode?: string | null; wholesalerId?: string | null } }>('/auth/me'),
   getCategories: () => request<{ categories: unknown[] }>('/catalog/categories'),
   getProducts: () => request<{ products: unknown[] }>('/catalog/products'),
   createProduct: (product: unknown) =>
@@ -79,4 +83,64 @@ export const api = {
     request(`/areas/pincodes/${pincode}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deletePincode: (pincode: string) =>
     request(`/areas/pincodes/${pincode}`, { method: 'DELETE' }),
+  getWholesalers: () => request<{ wholesalers: unknown[] }>('/wholesalers'),
+  createWholesaler: (payload: unknown) =>
+    request('/wholesalers', { method: 'POST', body: JSON.stringify(payload) }),
+  updateWholesaler: (id: string, payload: unknown) =>
+    request(`/wholesalers/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteWholesaler: (id: string) =>
+    request(`/wholesalers/${id}`, { method: 'DELETE' }),
+  getWholesalerQueue: (params?: { wholesalerId?: string; status?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.wholesalerId) search.set('wholesalerId', params.wholesalerId);
+    if (params?.status) search.set('status', params.status);
+    const query = search.toString() ? `?${search}` : '';
+    return request<{ orders: unknown[] }>(`/orders/wholesaler-queue${query}`);
+  },
+  updateWholesalerOrderStatus: (orderId: string, status: string, vendorTaskId?: string) =>
+    request(`/orders/${orderId}/wholesaler-status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, vendorTaskId }),
+    }),
+  getSettlementSummary: (period: 'week' | 'month', from?: string, to?: string) => {
+    const search = new URLSearchParams({ period });
+    if (from) search.set('from', from);
+    if (to) search.set('to', to);
+    return request<{ summary: unknown[]; period: string; range: unknown }>(
+      `/wholesalers/settlements/summary?${search}`
+    );
+  },
+  getRiders: () => request<{ riders: unknown[] }>('/riders'),
+  getRiderStats: () => request<{ summary: unknown[] }>('/riders/stats/summary'),
+  createRider: (payload: unknown) =>
+    request('/riders', { method: 'POST', body: JSON.stringify(payload) }),
+  updateRider: (id: string, payload: unknown) =>
+    request(`/riders/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteRider: (id: string) => request(`/riders/${id}`, { method: 'DELETE' }),
+  assignRiderToOrder: (orderId: string, riderId: string) =>
+    request(`/orders/${orderId}/assign-rider`, {
+      method: 'PATCH',
+      body: JSON.stringify({ riderId }),
+    }),
+  getPromoCodes: () => request<{ promoCodes: unknown[] }>('/promocodes'),
+  createPromoCode: (payload: unknown) =>
+    request('/promocodes', { method: 'POST', body: JSON.stringify(payload) }),
+  updatePromoCode: (id: string, payload: unknown) =>
+    request(`/promocodes/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deletePromoCode: (id: string) =>
+    request(`/promocodes/${id}`, { method: 'DELETE' }),
+  getReferralSummary: () => request<{ summary: unknown }>('/users/referrals/summary'),
+  getWholesalerSettlement: (
+    id: string,
+    period: 'week' | 'month',
+    from?: string,
+    to?: string
+  ) => {
+    const search = new URLSearchParams({ period });
+    if (from) search.set('from', from);
+    if (to) search.set('to', to);
+    return request<{ wholesaler: unknown; totals: unknown; productBreakdown: unknown[]; orders: unknown[] }>(
+      `/wholesalers/${id}/settlement?${search}`
+    );
+  },
 };

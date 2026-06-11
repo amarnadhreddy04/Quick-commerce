@@ -9,6 +9,14 @@ import {
 } from 'react';
 
 import { api, getAuthToken, setAuthToken } from '../lib/api';
+import {
+  homePathForRole,
+  isLocationAdmin,
+  isPanelRole,
+  isSuperAdmin,
+  isWholesaler,
+  type PanelUser,
+} from '../lib/roles';
 import { subscribeSyncEvents } from '../lib/sync';
 import type {
   AppSettings,
@@ -21,13 +29,14 @@ import type {
 
 type AdminStoreValue = {
   loading: boolean;
+  user: PanelUser | null;
   products: Product[];
   categories: Category[];
   orders: Order[];
   customers: Customer[];
   settings: AppSettings;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<string>;
   logout: () => void;
   refreshAll: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
@@ -48,11 +57,17 @@ const defaultSettings: AppSettings = {
   deliverySlot: 'Tomorrow, 6:00 AM – 8:00 AM',
   minOrderValue: 299,
   deliveryFee: 30,
+  platformFeeEnabled: true,
+  platformFee: 5,
   walletEnabled: false,
+  subscriptionEnabled: false,
+  referralEnabled: true,
+  referralRewardAmount: 50,
 };
 
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<PanelUser | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -61,19 +76,39 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(!!getAuthToken());
 
   const refreshAll = useCallback(async () => {
-    const [productsRes, categoriesRes, ordersRes, customersRes, settingsRes] = await Promise.all([
-      api.getProducts(),
-      api.getCategories(),
-      api.getOrders(),
-      api.getCustomers(),
-      api.getSettings(),
-    ]);
+    const meRes = await api.getMe();
+    const nextUser = meRes.user as PanelUser;
+    setUser(nextUser);
 
-    setProducts(productsRes.products as Product[]);
-    setCategories(categoriesRes.categories as Category[]);
-    setOrders(ordersRes.orders as Order[]);
-    setCustomers(customersRes.customers as Customer[]);
-    setSettings(settingsRes.settings as AppSettings);
+    if (isWholesaler(nextUser.role)) {
+      const ordersRes = await api.getWholesalerQueue();
+      setOrders(ordersRes.orders as Order[]);
+      setProducts([]);
+      setCategories([]);
+      setCustomers([]);
+      setSettings(defaultSettings);
+      return;
+    }
+
+    const tasks: Promise<void>[] = [
+      api.getProducts().then((res) => setProducts(res.products as Product[])),
+      api.getCategories().then((res) => setCategories(res.categories as Category[])),
+      api.getOrders().then((res) => setOrders(res.orders as Order[])),
+    ];
+
+    if (isSuperAdmin(nextUser.role) || isLocationAdmin(nextUser.role)) {
+      tasks.push(api.getCustomers().then((res) => setCustomers(res.customers as Customer[])));
+    } else {
+      setCustomers([]);
+    }
+
+    if (isSuperAdmin(nextUser.role)) {
+      tasks.push(api.getSettings().then((res) => setSettings(res.settings as AppSettings)));
+    } else {
+      setSettings(defaultSettings);
+    }
+
+    await Promise.all(tasks);
   }, []);
 
   useEffect(() => {
@@ -88,6 +123,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       } catch {
         setAuthToken(null);
         setIsAuthenticated(false);
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -106,6 +142,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AdminStoreValue>(
     () => ({
       loading,
+      user,
       products,
       categories,
       orders,
@@ -114,18 +151,20 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       isAuthenticated,
       refreshAll,
       login: async (email, password) => {
-        const { token, user } = await api.login(email, password);
-        if (user.role !== 'admin') {
-          throw new Error('Admin access required');
+        const { token, user: loggedIn } = await api.login(email, password);
+        if (!isPanelRole(loggedIn.role)) {
+          throw new Error('Panel access required');
         }
         setAuthToken(token);
         setIsAuthenticated(true);
+        setUser(loggedIn as PanelUser);
         await refreshAll();
-        return true;
+        return homePathForRole(loggedIn.role as PanelUser['role']);
       },
       logout: () => {
         setAuthToken(null);
         setIsAuthenticated(false);
+        setUser(null);
         setProducts([]);
         setCategories([]);
         setOrders([]);
@@ -170,6 +209,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }),
     [
       loading,
+      user,
       products,
       categories,
       orders,

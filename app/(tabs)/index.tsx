@@ -12,10 +12,12 @@ import Colors from '@/constants/Colors';
 import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useCatalog } from '@/context/CatalogContext';
+import { useSubscriptionEnabled } from '@/hooks/useSubscriptionEnabled';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { products } = useCatalog();
+  const subscriptionEnabled = useSubscriptionEnabled();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -26,7 +28,9 @@ export default function HomeScreen() {
     });
   };
 
-  const dailyEssentials = products.filter((p) => p.subscription || p.tag);
+  const dailyEssentials = products.filter((p) =>
+    subscriptionEnabled ? p.subscription || p.tag : p.tag
+  );
   const popularItems = products.slice(0, 8);
 
   return (

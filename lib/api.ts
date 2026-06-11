@@ -20,10 +20,52 @@ export type ApiUser = {
   name: string;
   email: string;
   phone?: string;
-  role: 'customer' | 'admin';
+  role: 'customer' | 'admin' | 'rider';
   location?: string;
   pincode?: string | null;
+  riderId?: string | null;
   walletBalance: number;
+  referralCode?: string | null;
+  referredByUserId?: string | null;
+  referredByName?: string | null;
+  referralsCount?: number;
+};
+
+export type RiderProfile = {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  vehicleType: string;
+  pincode: string;
+  active: boolean;
+  deliveriesCount: number;
+  deliveredOrders?: number;
+};
+
+export type RiderDelivery = {
+  id: string;
+  customerName: string;
+  customerPhone?: string | null;
+  date: string;
+  status: string;
+  items: number;
+  total: number;
+  deliverySlot: string;
+  riderStatus?: string | null;
+  customerPincode?: string | null;
+  deliveryAddress?: {
+    label: string;
+    line1: string;
+    line2?: string | null;
+    pincode?: string | null;
+    fullAddress: string;
+  };
+};
+
+export type RiderDeliveryDetail = RiderDelivery & {
+  customerPhone?: string | null;
+  lineItems: OrderLineItem[];
 };
 
 export type AppSettings = {
@@ -31,7 +73,27 @@ export type AppSettings = {
   deliverySlot: string;
   minOrderValue: number;
   deliveryFee: number;
+  platformFeeEnabled: boolean;
+  platformFee: number;
   walletEnabled: boolean;
+  subscriptionEnabled: boolean;
+  referralEnabled: boolean;
+  referralRewardAmount: number;
+};
+
+export type ReferralStats = {
+  code: string;
+  referralsCount: number;
+  totalEarned: number;
+  rewardPerReferral: number;
+  referralEnabled: boolean;
+  recentReferrals: {
+    id: string;
+    refereeName: string;
+    rewardAmount: number;
+    status: string;
+    createdAt: string;
+  }[];
 };
 
 type RequestOptions = {
@@ -98,6 +160,9 @@ export function registerRequest(payload: {
   password: string;
   location?: string;
   pincode: string;
+  acceptedTerms: boolean;
+  termsVersion?: string;
+  referralCode?: string;
 }) {
   return apiRequest<{ token: string; user: ApiUser; notifications: RegisterNotifications }>(
     '/auth/register',
@@ -216,8 +281,50 @@ export function fetchSettings() {
   return apiRequest<{ settings: AppSettings }>('/settings');
 }
 
+export function fetchReferralStats(token: string) {
+  return apiRequest<{ referral: ReferralStats }>('/users/referral', { token });
+}
+
+export type PromoValidation = {
+  valid: true;
+  code: string;
+  discount: number;
+};
+
+export function validatePromoCode(token: string, code: string, subtotal: number) {
+  return apiRequest<PromoValidation>('/promocodes/validate', {
+    method: 'POST',
+    token,
+    body: { code, subtotal },
+  });
+}
+
 export function fetchOrders(token: string) {
   return apiRequest<{ orders: Order[] }>('/orders', { token });
+}
+
+export function fetchRiderQueue(token: string) {
+  return apiRequest<{ orders: RiderDelivery[] }>('/orders/rider-queue', { token });
+}
+
+export function fetchRiderHistory(token: string) {
+  return apiRequest<{ orders: RiderDelivery[] }>('/orders/rider-history', { token });
+}
+
+export function fetchRiderProfile(token: string) {
+  return apiRequest<{ rider: RiderProfile }>('/riders/me', { token });
+}
+
+export function updateRiderDeliveryStatus(
+  token: string,
+  orderId: string,
+  status: 'out_for_delivery' | 'delivered'
+) {
+  return apiRequest<{ order: RiderDeliveryDetail }>(`/orders/${encodeURIComponent(orderId)}/rider-status`, {
+    method: 'PATCH',
+    token,
+    body: { status },
+  });
 }
 
 export async function fetchOrder(id: string, token: string) {

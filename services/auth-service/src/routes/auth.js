@@ -4,6 +4,13 @@ import { v4 as uuid } from 'uuid';
 
 import { queryOne, run } from '../../../shared/src/db.js';
 import { authRequired, formatUser, signToken } from '../../../shared/src/middleware/auth.js';
+import {
+  ensureUserReferralCode,
+  generateUniqueReferralCode,
+  processReferralSignup,
+  resolveReferrer,
+} from '../../../shared/src/referrals.js';
+import { TERMS_VERSION, validateTermsAcceptance } from '../../../shared/src/terms.js';
 import { createAddress } from '../../../shared/src/userAddresses.js';
 import addressRoutes from './addresses.js';
 
@@ -40,10 +47,16 @@ async function sendRegistrationNotifications(payload) {
 }
 
 router.post('/register', async (req, res) => {
-  const { name, email, phone, password, location, pincode } = req.body;
+  const { name, email, phone, password, location, pincode, acceptedTerms, termsVersion, referralCode } =
+    req.body;
 
   if (!name || !email || !password || !phone) {
     return res.status(400).json({ error: 'Name, email, phone, and password are required' });
+  }
+
+  const termsError = validateTermsAcceptance({ acceptedTerms, termsVersion });
+  if (termsError) {
+    return res.status(400).json({ error: termsError });
   }
 
   if (password.length < 6) {
@@ -71,14 +84,34 @@ router.post('/register', async (req, res) => {
     return res.status(409).json({ error: 'Email already registered' });
   }
 
+  if (referralCode && !resolveReferrer(referralCode)) {
+    return res.status(400).json({ error: 'Invalid referral code' });
+  }
+
   const id = uuid();
   const passwordHash = bcrypt.hashSync(password, 10);
+  const newReferralCode = generateUniqueReferralCode(name);
 
   run(
-    `INSERT INTO users (id, name, email, phone, password_hash, role, location, pincode, wallet_balance, active)
-     VALUES (?, ?, ?, ?, ?, 'customer', ?, ?, 0, 1)`,
-    [id, name, email.toLowerCase(), phone, passwordHash, location ?? null, pincodeDigits]
+    `INSERT INTO users (id, name, email, phone, password_hash, role, location, pincode, wallet_balance, active, terms_accepted_at, terms_version, referral_code)
+     VALUES (?, ?, ?, ?, ?, 'customer', ?, ?, 0, 1, datetime('now'), ?, ?)`,
+    [
+      id,
+      name,
+      email.toLowerCase(),
+      phone,
+      passwordHash,
+      location ?? null,
+      pincodeDigits,
+      termsVersion ?? TERMS_VERSION,
+      newReferralCode,
+    ]
   );
+
+  let referralResult = { referredByUserId: null, rewardCredited: false };
+  if (referralCode) {
+    referralResult = processReferralSignup({ newUserId: id, referralCode });
+  }
 
   createAddress(id, {
     label: 'Home',
@@ -99,6 +132,12 @@ router.post('/register', async (req, res) => {
   res.status(201).json({
     token,
     user: formatUser(user),
+    referral: referralResult.referredByUserId
+      ? {
+          referredBy: referralResult.referrerName ?? null,
+          rewardCreditedToReferrer: referralResult.rewardCredited,
+        }
+      : null,
     notifications: {
       emailSent: false,
       smsSent: false,
@@ -133,7 +172,11 @@ router.get('/me', authRequired, (req, res) => {
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
-  res.json({ user: formatUser(user) });
+  if (user.role === 'customer' && !user.referral_code) {
+    ensureUserReferralCode(user.id, user.name);
+  }
+  const refreshed = queryOne('SELECT * FROM users WHERE id = ?', [req.user.id]);
+  res.json({ user: formatUser(refreshed) });
 });
 
 export default router;

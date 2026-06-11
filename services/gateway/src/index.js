@@ -16,6 +16,9 @@ const routes = [
   { path: '/api/users', target: process.env.USER_SERVICE_URL || 'http://127.0.0.1:3015' },
   { path: '/api/settings', target: process.env.SETTINGS_SERVICE_URL || 'http://127.0.0.1:3016' },
   { path: '/api/areas', target: process.env.SETTINGS_SERVICE_URL || 'http://127.0.0.1:3016' },
+  { path: '/api/wholesalers', target: process.env.SETTINGS_SERVICE_URL || 'http://127.0.0.1:3016' },
+  { path: '/api/riders', target: process.env.SETTINGS_SERVICE_URL || 'http://127.0.0.1:3016' },
+  { path: '/api/promocodes', target: process.env.SETTINGS_SERVICE_URL || 'http://127.0.0.1:3016' },
 ];
 
 function resolveTarget(pathname) {

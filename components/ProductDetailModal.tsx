@@ -6,6 +6,7 @@ import ProductDetailGallery from '@/components/ProductDetailGallery';
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useSubscriptionEnabled } from '@/hooks/useSubscriptionEnabled';
 import { getProductStock, isOutOfStock } from '@/lib/productStock';
 import type { Product } from '@/types';
 
@@ -17,6 +18,7 @@ type Props = {
 export default function ProductDetailModal({ product, onClose }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const subscriptionEnabled = useSubscriptionEnabled();
   if (!product) return null;
 
   const stock = getProductStock(product);
@@ -64,7 +66,7 @@ export default function ProductDetailModal({ product, onClose }: Props) {
               </View>
             ) : null}
 
-            {product.subscription ? (
+            {subscriptionEnabled && product.subscription ? (
               <View style={[styles.tagBadge, { backgroundColor: colors.wallet }]}>
                 <Text style={[styles.tagText, { color: colors.primary }]}>Subscription available</Text>
               </View>

@@ -42,7 +42,12 @@ const defaultSettings: AppSettings = {
   deliverySlot: 'Tomorrow, 6:00 AM – 8:00 AM',
   minOrderValue: 299,
   deliveryFee: 30,
+  platformFeeEnabled: true,
+  platformFee: 5,
   walletEnabled: false,
+  subscriptionEnabled: false,
+  referralEnabled: true,
+  referralRewardAmount: 50,
 };
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);

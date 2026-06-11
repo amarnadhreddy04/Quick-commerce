@@ -5,6 +5,7 @@ import { createServiceApp } from '../../shared/src/createApp.js';
 import {
   sendRegistrationNotifications,
   sendStockAvailableNotifications,
+  sendVendorOrderNotification,
 } from './services/notifications.js';
 
 const app = createServiceApp('notification-service');
@@ -19,6 +20,16 @@ router.post('/stock-available', async (req, res) => {
 
   const notifications = await sendStockAvailableNotifications({ name, email, phone, productName });
   res.json(notifications);
+});
+
+router.post('/vendor-order', async (req, res) => {
+  const payload = req.body ?? {};
+  if (!payload.shopName || !payload.orderId) {
+    return res.status(400).json({ error: 'shopName and orderId are required' });
+  }
+
+  const result = await sendVendorOrderNotification(payload);
+  res.json(result);
 });
 
 router.post('/registration', async (req, res) => {

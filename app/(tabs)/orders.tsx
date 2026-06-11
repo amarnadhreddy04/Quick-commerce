@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import ProductImage from '@/components/ProductImage';
@@ -7,6 +8,7 @@ import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useCatalog } from '@/context/CatalogContext';
+import { useSubscriptionEnabled } from '@/hooks/useSubscriptionEnabled';
 import type { Order } from '@/types';
 
 const statusConfig: Record<
@@ -21,42 +23,59 @@ const statusConfig: Record<
 
 export default function OrdersScreen() {
   const router = useRouter();
-  const { orders, products } = useCatalog();
+  const { orders, products, refreshOrders } = useCatalog();
+  const subscriptionEnabled = useSubscriptionEnabled();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const subscriptionProducts = products.filter((product) => product.subscription);
+  const subscriptionProducts = subscriptionEnabled
+    ? products.filter((product) => product.subscription)
+    : [];
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshOrders().catch(() => undefined);
+    }, [refreshOrders])
+  );
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Active Subscriptions</Text>
-      {subscriptionProducts.length === 0 ? (
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-          No active subscriptions yet.
-        </Text>
-      ) : (
-        subscriptionProducts.map((product) => (
-          <View
-            key={product.id}
-            style={[styles.subCard, shadows.card, { backgroundColor: colors.card }]}>
-            <View style={styles.subImageWrap}>
-              <ProductImage product={product} style={styles.subImage} emojiStyle={styles.emoji} />
-            </View>
-            <View style={styles.subInfo}>
-              <Text style={[styles.subName, { color: colors.text }]}>{product.name}</Text>
-              <Text style={[styles.subMeta, { color: colors.textSecondary }]}>
-                Daily · Next: Tomorrow morning
-              </Text>
-            </View>
-            <View style={[styles.subBadge, { backgroundColor: colors.wallet }]}>
-              <Text style={[styles.subBadgeText, { color: colors.primary }]}>Active</Text>
-            </View>
-          </View>
-        ))
-      )}
+      {subscriptionEnabled ? (
+        <>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Active Subscriptions</Text>
+          {subscriptionProducts.length === 0 ? (
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              No active subscriptions yet.
+            </Text>
+          ) : (
+            subscriptionProducts.map((product) => (
+              <View
+                key={product.id}
+                style={[styles.subCard, shadows.card, { backgroundColor: colors.card }]}>
+                <View style={styles.subImageWrap}>
+                  <ProductImage product={product} style={styles.subImage} emojiStyle={styles.emoji} />
+                </View>
+                <View style={styles.subInfo}>
+                  <Text style={[styles.subName, { color: colors.text }]}>{product.name}</Text>
+                  <Text style={[styles.subMeta, { color: colors.textSecondary }]}>
+                    Daily · Next: Tomorrow morning
+                  </Text>
+                </View>
+                <View style={[styles.subBadge, { backgroundColor: colors.wallet }]}>
+                  <Text style={[styles.subBadgeText, { color: colors.primary }]}>Active</Text>
+                </View>
+              </View>
+            ))
+          )}
+        </>
+      ) : null}
 
-      <Text style={[styles.sectionTitle, { color: colors.text, marginTop: spacing.xl }]}>
+      <Text
+        style={[
+          styles.sectionTitle,
+          { color: colors.text, marginTop: subscriptionEnabled ? spacing.xl : 0 },
+        ]}>
         Order History
       </Text>
       {orders.length === 0 ? (

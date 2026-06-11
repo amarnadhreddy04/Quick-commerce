@@ -10,10 +10,10 @@ import { useColorScheme } from '@/components/useColorScheme';
 export default function WalletBanner() {
   const walletEnabled = useWalletEnabled();
   const { user } = useAuth();
-
-  if (!walletEnabled) return null;
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+
+  if (!walletEnabled) return null;
 
   return (
     <View style={[styles.banner, { backgroundColor: colors.wallet, borderColor: colors.border }]}>

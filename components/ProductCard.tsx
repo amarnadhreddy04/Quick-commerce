@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import ProductCartControls from '@/components/ProductCartControls';
 import ProductImageGallery from '@/components/ProductImageGallery';
+import { useSubscriptionEnabled } from '@/hooks/useSubscriptionEnabled';
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
 import { useProductDetail } from '@/context/ProductDetailContext';
@@ -19,6 +20,7 @@ export default function ProductCard({ product, onPress, fullWidth = false }: Pro
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const { openProduct } = useProductDetail();
+  const subscriptionEnabled = useSubscriptionEnabled();
   const outOfStock = isOutOfStock(product);
 
   return (
@@ -37,7 +39,7 @@ export default function ProductCard({ product, onPress, fullWidth = false }: Pro
             <Text style={styles.outOfStockOverlayText}>OUT OF STOCK</Text>
           </View>
         ) : null}
-        {product.subscription ? (
+        {subscriptionEnabled && product.subscription ? (
           <View style={[styles.badge, { backgroundColor: colors.wallet }]}>
             <Text style={[styles.badgeText, { color: colors.primary }]}>Subscribe</Text>
           </View>

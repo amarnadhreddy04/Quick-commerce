@@ -10,8 +10,16 @@ import {
   saveProductPincodes,
   withLocationMeta,
 } from '../../../shared/src/locationCatalog.js';
-import { adminRequired, authRequired, formatCategory, formatProduct } from '../../../shared/src/middleware/auth.js';
+import {
+  adminRequired,
+  authRequired,
+  formatCategory,
+  formatProduct,
+  optionalAuth,
+} from '../../../shared/src/middleware/auth.js';
+import { getPanelPincode } from '../../../shared/src/panelAccess.js';
 import { prepareProductImagesPayload } from '../../../shared/src/productImages.js';
+import { resolveStoreType } from '../../../shared/src/storeTypes.js';
 import {
   getStockNotifyStatus,
   maybeNotifyRestocked,
@@ -30,8 +38,15 @@ function formatProductWithLocations(row) {
   return withLocationMeta(formatProduct(row), getProductPincodes(row.id));
 }
 
-router.get('/categories', (req, res) => {
-  const { pincode } = req.query;
+function resolveCatalogPincode(req) {
+  if (req.user?.role === 'location_admin') {
+    return getPanelPincode(req.user);
+  }
+  return typeof req.query.pincode === 'string' ? req.query.pincode : undefined;
+}
+
+router.get('/categories', optionalAuth, (req, res) => {
+  const pincode = resolveCatalogPincode(req);
   let sql = 'SELECT c.* FROM categories c WHERE COALESCE(c.sort_order, 0) < 999';
   const params = [];
 
@@ -136,8 +151,9 @@ router.get('/banners', (req, res) => {
   });
 });
 
-router.get('/products', (req, res) => {
-  const { categoryId, subCategoryId, activeOnly, pincode } = req.query;
+router.get('/products', optionalAuth, (req, res) => {
+  const { categoryId, subCategoryId, activeOnly } = req.query;
+  const pincode = resolveCatalogPincode(req);
   let sql = 'SELECT p.* FROM products p WHERE 1=1';
   const params = [];
 
@@ -197,9 +213,10 @@ router.post('/products', authRequired, adminRequired, async (req, res) => {
   }
 
   const id = p.id || `p${Date.now()}`;
+  const storeType = resolveStoreType({ storeType: p.storeType, categoryId: p.categoryId });
   run(
-    `INSERT INTO products (id, name, brand, category_id, sub_category_id, price, mrp, unit, image, images, description, subscription, tag, stock, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO products (id, name, brand, category_id, sub_category_id, price, mrp, unit, image, images, description, subscription, tag, stock, active, store_type)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       p.name,
@@ -216,6 +233,7 @@ router.post('/products', authRequired, adminRequired, async (req, res) => {
       p.tag ?? null,
       p.stock ?? 0,
       p.active === false ? 0 : 1,
+      storeType,
     ]
   );
   if (Array.isArray(p.pincodes)) {
@@ -237,8 +255,12 @@ router.put('/products/:id', authRequired, adminRequired, async (req, res) => {
     return res.status(400).json({ error: prepared.error });
   }
 
+  const storeType = resolveStoreType({
+    storeType: merged.storeType,
+    categoryId: merged.categoryId,
+  });
   run(
-    `UPDATE products SET name=?, brand=?, category_id=?, sub_category_id=?, price=?, mrp=?, unit=?, image=?, images=?, description=?, subscription=?, tag=?, stock=?, active=?
+    `UPDATE products SET name=?, brand=?, category_id=?, sub_category_id=?, price=?, mrp=?, unit=?, image=?, images=?, description=?, subscription=?, tag=?, stock=?, active=?, store_type=?
      WHERE id=?`,
     [
       merged.name,
@@ -255,6 +277,7 @@ router.put('/products/:id', authRequired, adminRequired, async (req, res) => {
       merged.tag ?? null,
       merged.stock ?? 0,
       merged.active === false ? 0 : 1,
+      storeType,
       req.params.id,
     ]
   );

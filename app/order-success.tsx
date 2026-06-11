@@ -1,21 +1,46 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
+import { useCart } from '@/context/CartContext';
+import { useCatalog } from '@/context/CatalogContext';
 import { useColorScheme } from '@/components/useColorScheme';
+
+const SUCCESS_REDIRECT_MS = 3500;
+
+const DEFAULT_MESSAGE =
+  'Thank you for your order! We will deliver tomorrow between 6:00 AM and 9:00 AM.';
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ message?: string; orderId?: string }>();
+  const { clearCart } = useCart();
+  const { refreshOrders } = useCatalog();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  const message =
-    params.message ||
-    'Your order has been placed successfully for tomorrow morning delivery.';
+  const message = params.message || DEFAULT_MESSAGE;
+  const orderId = params.orderId?.trim() || '';
+  const clearedRef = useRef(false);
+
+  useEffect(() => {
+    refreshOrders().catch(() => undefined);
+  }, [refreshOrders]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!clearedRef.current) {
+        clearedRef.current = true;
+        clearCart();
+      }
+      router.replace('/(tabs)');
+    }, SUCCESS_REDIRECT_MS);
+    return () => clearTimeout(timer);
+  }, [router, clearCart]);
 
   return (
     <>
@@ -25,21 +50,14 @@ export default function OrderSuccessScreen() {
           <View style={[styles.iconCircle, { backgroundColor: colors.wallet }]}>
             <Ionicons name="checkmark-circle" size={72} color={colors.primary} />
           </View>
-          <Text style={[styles.title, { color: colors.text }]}>Order Placed!</Text>
-          {params.orderId ? (
-            <Text style={[styles.orderId, { color: colors.textSecondary }]}>Order ID: {params.orderId}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Thank You!</Text>
+          {orderId ? (
+            <Text style={[styles.orderId, { color: colors.textSecondary }]}>Order ID: {orderId}</Text>
           ) : null}
           <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
-
-          <Pressable
-            onPress={() => router.replace('/(tabs)/orders')}
-            style={[styles.primaryButton, { backgroundColor: colors.primary }]}>
-            <Text style={styles.primaryButtonText}>View My Orders</Text>
-          </Pressable>
-
-          <Pressable onPress={() => router.replace('/(tabs)')} style={styles.secondaryButton}>
-            <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Continue Shopping</Text>
-          </Pressable>
+          <Text style={[styles.redirectHint, { color: colors.textSecondary }]}>
+            Taking you to home in a moment...
+          </Text>
         </View>
       </SafeAreaView>
     </>
@@ -63,18 +81,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  title: { fontSize: 28, fontWeight: '800' },
+  title: { fontSize: 30, fontWeight: '800' },
   orderId: { fontSize: 14, fontWeight: '600' },
-  message: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
-  primaryButton: {
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    minWidth: 220,
-    alignItems: 'center',
-  },
-  primaryButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
-  secondaryButton: { padding: spacing.md },
-  secondaryButtonText: { fontSize: 15, fontWeight: '600' },
+  message: { fontSize: 16, textAlign: 'center', lineHeight: 24 },
+  redirectHint: { fontSize: 13, textAlign: 'center', marginTop: spacing.sm },
 });

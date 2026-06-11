@@ -13,6 +13,10 @@ import {
   getPeriodLabel,
   type OrderFilterState,
 } from '../lib/orderFilters';
+import {
+  formatPaymentSummary,
+  paymentStatusBadgeKey,
+} from '../lib/paymentLabels';
 import { useAdminStore } from '../store/AdminStore';
 import type { OrderStatus } from '../types';
 
@@ -126,8 +130,9 @@ export default function Orders() {
                     <td>{order.items}</td>
                     <td>₹{order.total}</td>
                     <td>
-                      <span className={`badge ${statusBadge[order.paymentStatus ?? 'pending']}`}>
-                        {order.paymentMethod ?? '—'} · {order.paymentStatus ?? 'pending'}
+                      <span
+                        className={`badge ${statusBadge[paymentStatusBadgeKey(order.paymentStatus, order.paymentMethod)]}`}>
+                        {formatPaymentSummary(order.paymentMethod, order.paymentStatus)}
                       </span>
                     </td>
                     <td>

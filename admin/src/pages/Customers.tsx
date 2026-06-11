@@ -9,7 +9,7 @@ export default function Customers() {
     <div>
       <PageHeader
         title="Customers"
-        subtitle="View customer accounts and wallet balances"
+        subtitle="View customer accounts, referrals, and wallet balances"
       />
 
       <div className="card">
@@ -20,6 +20,9 @@ export default function Customers() {
                 <th>Name</th>
                 <th>Phone</th>
                 <th>Location</th>
+                <th>Referral code</th>
+                <th>Referred by</th>
+                <th>Referrals</th>
                 <th>Wallet</th>
                 <th>Orders</th>
                 <th>Status</th>
@@ -32,6 +35,9 @@ export default function Customers() {
                   <td>{customer.name}</td>
                   <td>{customer.phone}</td>
                   <td>{customer.location}</td>
+                  <td>{customer.referralCode ?? '—'}</td>
+                  <td>{customer.referredByName ?? '—'}</td>
+                  <td>{customer.referralsCount ?? 0}</td>
                   <td>₹{customer.walletBalance.toFixed(2)}</td>
                   <td>{customer.ordersCount}</td>
                   <td>

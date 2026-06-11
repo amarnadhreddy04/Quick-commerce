@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AuthProvider, isRiderUser, useAuth } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { DeliveryAreaProvider } from '@/context/DeliveryAreaContext';
@@ -26,6 +26,7 @@ function AuthRedirect() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inRiderGroup = segments[0] === '(rider)';
 
     if (!user && !inAuthGroup) {
       router.replace('/(auth)/login');
@@ -33,6 +34,16 @@ function AuthRedirect() {
     }
 
     if (user && inAuthGroup) {
+      router.replace(isRiderUser(user) ? '/(rider)/deliveries' : '/(tabs)');
+      return;
+    }
+
+    if (user && isRiderUser(user) && !inRiderGroup) {
+      router.replace('/(rider)/deliveries');
+      return;
+    }
+
+    if (user && !isRiderUser(user) && inRiderGroup) {
       router.replace('/(tabs)');
     }
   }, [user, loading, segments, router]);
@@ -47,6 +58,7 @@ function RootStack() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(rider)" />
         <Stack.Screen
           name="category/[id]"
           options={{ headerShown: true, title: 'Category', headerBackTitle: 'Back' }}

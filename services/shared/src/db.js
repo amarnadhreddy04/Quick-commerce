@@ -2,13 +2,18 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import initSqlJs from 'sql.js';
+import Database from 'better-sqlite3';
 
+import { DEMO_ORDER_ID, DEMO_ORDER_LINE_ITEMS, repairDemoOrderLineItems } from './demoOrderItems.js';
 import { ensureDemoOrder } from './ensureDemoOrder.js';
 import { ensureDemoUsers } from './ensureDemoUsers.js';
+import { ensureDemoPromoCodes } from './promoCodes.js';
+import { ensureAllCustomerReferralCodes } from './referrals.js';
+import { ensureDemoRiders, isOrderReadyForRider, tryAutoAssignRider } from './riderDelivery.js';
 import { migrateGroceryCategories } from './groceryCategories.js';
 import { BANNER_IMAGES, CATEGORY_IMAGES, PRODUCT_IMAGES, isImageUri } from './mediaUrls.js';
 import { formatProductImagesRow } from './productImages.js';
+import { assignOrderToWholesaler } from './wholesalerAssignment.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, '..', '..', '..');
@@ -19,8 +24,33 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-let SQL;
 let db;
+const initLockPath = path.join(dataDir, '.db-init.lock');
+
+function bindParams(params = []) {
+  return Array.isArray(params) ? params : [params];
+}
+
+async function acquireInitLock() {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    try {
+      fs.writeFileSync(initLockPath, String(process.pid), { flag: 'wx' });
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+}
+
+function releaseInitLock() {
+  try {
+    if (fs.existsSync(initLockPath)) {
+      fs.unlinkSync(initLockPath);
+    }
+  } catch {
+    // ignore stale lock cleanup errors
+  }
+}
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS users (
@@ -163,32 +193,35 @@ const SCHEMA = `
   );
 `;
 
-export function saveDatabase() {
-  if (!db) return;
-  const data = db.export();
-  fs.writeFileSync(dbPath, Buffer.from(data));
-}
+/** No-op: better-sqlite3 persists writes to disk automatically. */
+export function saveDatabase() {}
 
 export async function initDatabase() {
   if (db) return db;
 
-  SQL = await initSqlJs();
+  await acquireInitLock();
 
-  if (fs.existsSync(dbPath)) {
-    const fileBuffer = fs.readFileSync(dbPath);
-    db = new SQL.Database(fileBuffer);
-  } else {
-    db = new SQL.Database();
+  try {
+    const native = new Database(dbPath);
+    native.pragma('journal_mode = WAL');
+    native.pragma('foreign_keys = ON');
+    native.pragma('busy_timeout = 5000');
+
+    db = {
+      native,
+      exec: (sql) => native.exec(sql),
+      run: (sql, params = []) => native.prepare(sql).run(...bindParams(params)),
+    };
+
+    db.exec(SCHEMA);
+    await migrateDatabase();
+    return db;
+  } finally {
+    releaseInitLock();
   }
-
-  db.run('PRAGMA foreign_keys = ON;');
-  db.exec(SCHEMA);
-  migrateDatabase();
-  saveDatabase();
-  return db;
 }
 
-function migrateDatabase() {
+async function migrateDatabase() {
   const columns = queryAll('PRAGMA table_info(orders)');
   const names = new Set(columns.map((col) => col.name));
 
@@ -197,6 +230,13 @@ function migrateDatabase() {
     ['payment_method', 'TEXT'],
     ['razorpay_order_id', 'TEXT'],
     ['razorpay_payment_id', 'TEXT'],
+    ['wholesaler_id', 'TEXT'],
+    ['wholesaler_status', 'TEXT'],
+    ['wholesale_cost', 'REAL'],
+    ['rider_id', 'TEXT'],
+    ['rider_status', 'TEXT'],
+    ['rider_assigned_at', 'TEXT'],
+    ['rider_delivered_at', 'TEXT'],
   ];
 
   additions.forEach(([name, type]) => {
@@ -204,6 +244,10 @@ function migrateDatabase() {
       getDb().run(`ALTER TABLE orders ADD COLUMN ${name} ${type}`);
     }
   });
+  if (!names.has('created_at')) {
+    getDb().run('ALTER TABLE orders ADD COLUMN created_at TEXT');
+  }
+  getDb().run(`UPDATE orders SET created_at = datetime('now') WHERE created_at IS NULL OR created_at = ''`);
 
   getDb().exec(`
     CREATE TABLE IF NOT EXISTS service_areas (
@@ -222,6 +266,39 @@ function migrateDatabase() {
   if (!userColumnNames.has('pincode')) {
     getDb().run('ALTER TABLE users ADD COLUMN pincode TEXT');
   }
+  if (!userColumnNames.has('admin_pincode')) {
+    getDb().run('ALTER TABLE users ADD COLUMN admin_pincode TEXT');
+  }
+  if (!userColumnNames.has('wholesaler_id')) {
+    getDb().run('ALTER TABLE users ADD COLUMN wholesaler_id TEXT');
+  }
+  if (!userColumnNames.has('rider_id')) {
+    getDb().run('ALTER TABLE users ADD COLUMN rider_id TEXT');
+  }
+  if (!userColumnNames.has('terms_accepted_at')) {
+    getDb().run('ALTER TABLE users ADD COLUMN terms_accepted_at TEXT');
+  }
+  if (!userColumnNames.has('terms_version')) {
+    getDb().run('ALTER TABLE users ADD COLUMN terms_version TEXT');
+  }
+  if (!userColumnNames.has('referral_code')) {
+    getDb().run('ALTER TABLE users ADD COLUMN referral_code TEXT');
+  }
+  if (!userColumnNames.has('referred_by_user_id')) {
+    getDb().run('ALTER TABLE users ADD COLUMN referred_by_user_id TEXT');
+  }
+
+  getDb().exec(`
+    CREATE TABLE IF NOT EXISTS referrals (
+      id TEXT PRIMARY KEY,
+      referrer_user_id TEXT NOT NULL,
+      referee_user_id TEXT NOT NULL UNIQUE,
+      reward_amount REAL NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'registered',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      credited_at TEXT
+    );
+  `);
 
   getDb().exec(`
     CREATE TABLE IF NOT EXISTS service_pincodes (
@@ -257,13 +334,72 @@ function migrateDatabase() {
   if (!settingsColumnNames.has('wallet_enabled')) {
     getDb().run('ALTER TABLE app_settings ADD COLUMN wallet_enabled INTEGER NOT NULL DEFAULT 0');
   }
+  if (!settingsColumnNames.has('subscription_enabled')) {
+    getDb().run('ALTER TABLE app_settings ADD COLUMN subscription_enabled INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!settingsColumnNames.has('platform_fee_enabled')) {
+    getDb().run('ALTER TABLE app_settings ADD COLUMN platform_fee_enabled INTEGER NOT NULL DEFAULT 1');
+  }
+  if (!settingsColumnNames.has('platform_fee')) {
+    getDb().run('ALTER TABLE app_settings ADD COLUMN platform_fee REAL NOT NULL DEFAULT 5');
+  }
+  if (!settingsColumnNames.has('referral_enabled')) {
+    getDb().run('ALTER TABLE app_settings ADD COLUMN referral_enabled INTEGER NOT NULL DEFAULT 1');
+  }
+  if (!settingsColumnNames.has('referral_reward_amount')) {
+    getDb().run('ALTER TABLE app_settings ADD COLUMN referral_reward_amount REAL NOT NULL DEFAULT 50');
+  }
   const settingsRow = queryOne('SELECT id FROM app_settings WHERE id = 1');
   if (!settingsRow) {
     getDb().run(
-      `INSERT INTO app_settings (id, delivery_cutoff, delivery_slot, min_order_value, delivery_fee, wallet_enabled)
-       VALUES (1, '11:00 PM', 'Tomorrow, 6:00 AM – 8:00 AM', 299, 30, 0)`
+      `INSERT INTO app_settings (id, delivery_cutoff, delivery_slot, min_order_value, delivery_fee, wallet_enabled, subscription_enabled, platform_fee_enabled, platform_fee)
+       VALUES (1, '11:00 PM', 'Tomorrow, 6:00 AM – 8:00 AM', 299, 30, 0, 0, 1, 5)`
+    );
+  } else {
+    getDb().run(
+      `UPDATE app_settings
+       SET platform_fee_enabled = COALESCE(platform_fee_enabled, 1),
+           platform_fee = COALESCE(platform_fee, 5),
+           referral_enabled = COALESCE(referral_enabled, 1),
+           referral_reward_amount = COALESCE(referral_reward_amount, 50)
+       WHERE id = 1`
     );
   }
+
+  ensureAllCustomerReferralCodes();
+
+  const orderColumns = queryAll('PRAGMA table_info(orders)');
+  const orderColumnNames = new Set(orderColumns.map((col) => col.name));
+  if (!orderColumnNames.has('delivery_fee')) {
+    getDb().run('ALTER TABLE orders ADD COLUMN delivery_fee REAL');
+  }
+  if (!orderColumnNames.has('platform_fee')) {
+    getDb().run('ALTER TABLE orders ADD COLUMN platform_fee REAL');
+  }
+  if (!orderColumnNames.has('promo_code')) {
+    getDb().run('ALTER TABLE orders ADD COLUMN promo_code TEXT');
+  }
+  if (!orderColumnNames.has('promo_discount')) {
+    getDb().run('ALTER TABLE orders ADD COLUMN promo_discount REAL');
+  }
+
+  getDb().exec(`
+    CREATE TABLE IF NOT EXISTS promo_codes (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      description TEXT,
+      discount_type TEXT NOT NULL,
+      discount_value REAL NOT NULL,
+      min_order_value REAL NOT NULL DEFAULT 0,
+      max_discount REAL,
+      usage_limit INTEGER,
+      used_count INTEGER NOT NULL DEFAULT 0,
+      expires_at TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  ensureDemoPromoCodes();
 
   getDb().run(
     `UPDATE users SET pincode = '523201', location = 'Addanki, Andhra Pradesh'
@@ -283,6 +419,21 @@ function migrateDatabase() {
   }
   if (!productColumnNames.has('images')) {
     getDb().run('ALTER TABLE products ADD COLUMN images TEXT');
+  }
+  if (!productColumnNames.has('wholesale_price')) {
+    getDb().run('ALTER TABLE products ADD COLUMN wholesale_price REAL');
+  }
+  if (!productColumnNames.has('store_type')) {
+    getDb().run('ALTER TABLE products ADD COLUMN store_type TEXT');
+  }
+
+  const orderItemColumns = queryAll('PRAGMA table_info(order_items)');
+  const orderItemColumnNames = new Set(orderItemColumns.map((col) => col.name));
+  if (!orderItemColumnNames.has('wholesale_price')) {
+    getDb().run('ALTER TABLE order_items ADD COLUMN wholesale_price REAL');
+  }
+  if (!orderItemColumnNames.has('wholesaler_id')) {
+    getDb().run('ALTER TABLE order_items ADD COLUMN wholesaler_id TEXT');
   }
 
   getDb().exec(`
@@ -329,8 +480,178 @@ function migrateDatabase() {
   migrateOrderItems();
   migrateLocationCatalog();
   migrateGroceryCategories({ queryOne, run, getDb, queryAll });
+  repairDemoOrderLineItems({ queryOne, queryAll, run, getDb });
+  migrateCodPaymentStatus();
+  migrateWholesalers();
+  migrateRiders();
   ensureDemoUsers();
-  ensureDemoOrder();
+  await ensureDemoOrder();
+  await backfillWholesalerAssignments();
+  backfillRiderAssignments();
+}
+
+function migrateRiders() {
+  getDb().exec(`
+    CREATE TABLE IF NOT EXISTS riders (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      email TEXT,
+      vehicle_type TEXT NOT NULL DEFAULT 'bike',
+      pincode TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      deliveries_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  ensureDemoRiders();
+}
+
+function backfillRiderAssignments() {
+  const orders = queryAll(
+    `SELECT id, user_id FROM orders
+     WHERE rider_id IS NULL
+       AND status NOT IN ('cancelled', 'delivered')`
+  );
+  orders.forEach((order) => {
+    if (isOrderReadyForRider(order.id)) {
+      tryAutoAssignRider(order.id, order.user_id);
+    }
+  });
+}
+
+function migrateWholesalers() {
+  const wholesalerColumns = queryAll('PRAGMA table_info(wholesalers)');
+  const wholesalerColumnNames = new Set(wholesalerColumns.map((col) => col.name));
+  if (!wholesalerColumnNames.has('store_type')) {
+    getDb().run("ALTER TABLE wholesalers ADD COLUMN store_type TEXT NOT NULL DEFAULT 'general'");
+  }
+
+  getDb().exec(`
+    CREATE TABLE IF NOT EXISTS wholesalers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      shop_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      email TEXT,
+      address TEXT,
+      store_type TEXT NOT NULL DEFAULT 'general',
+      settlement_cycle TEXT NOT NULL DEFAULT 'weekly',
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS wholesaler_pincodes (
+      wholesaler_id TEXT NOT NULL,
+      pincode TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (wholesaler_id, pincode)
+    );
+    CREATE TABLE IF NOT EXISTS order_vendor_tasks (
+      id TEXT PRIMARY KEY,
+      order_id TEXT NOT NULL,
+      wholesaler_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'assigned',
+      wholesale_cost REAL NOT NULL DEFAULT 0,
+      item_count INTEGER NOT NULL DEFAULT 0,
+      notified_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  const demoStores = [
+    {
+      shopName: 'Ravi General Store',
+      name: 'Ravi Kumar',
+      phone: '+91 91234 56789',
+      email: 'ravi.wholesale@example.com',
+      address: 'Main Road, Addanki',
+      storeType: 'general',
+      userEmail: 'ravi.wholesale@example.com',
+    },
+    {
+      shopName: 'Addanki Vegetable Store',
+      name: 'Srinivas Rao',
+      phone: '+91 91234 56780',
+      email: 'addanki-veg@example.com',
+      address: 'Market Road, Addanki',
+      storeType: 'vegetables',
+      userEmail: 'addanki-veg@example.com',
+    },
+    {
+      shopName: 'Milk & Bread Store',
+      name: 'Lakshmi Devi',
+      phone: '+91 91234 56781',
+      email: 'addanki-milk@example.com',
+      address: 'Station Road, Addanki',
+      storeType: 'milk_bread',
+      userEmail: 'addanki-milk@example.com',
+    },
+  ];
+
+  demoStores.forEach((store) => {
+    let row = queryOne('SELECT id FROM wholesalers WHERE shop_name = ?', [store.shopName]);
+    if (!row) {
+      const id = randomUUID();
+      getDb().run(
+        `INSERT INTO wholesalers (id, name, shop_name, phone, email, address, store_type, settlement_cycle, active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'weekly', 1)`,
+        [id, store.name, store.shopName, store.phone, store.email, store.address, store.storeType]
+      );
+      row = { id };
+    } else {
+      getDb().run(
+        'UPDATE wholesalers SET store_type = ?, phone = ?, email = ?, active = 1 WHERE id = ?',
+        [store.storeType, store.phone, store.email, row.id]
+      );
+    }
+
+    getDb().run(
+      'INSERT OR IGNORE INTO wholesaler_pincodes (wholesaler_id, pincode, active) VALUES (?, ?, 1)',
+      [row.id, '523201']
+    );
+
+    if (store.userEmail) {
+      getDb().run('UPDATE users SET wholesaler_id = ? WHERE email = ?', [row.id, store.userEmail]);
+    }
+  });
+
+  getDb().run(
+    `UPDATE products SET store_type = 'milk_bread'
+     WHERE store_type IS NULL AND category_id IN ('milk', 'eggs', 'bread', 'breakfast', 'beverages', 'tea-coffee')`
+  );
+  getDb().run(
+    `UPDATE products SET store_type = 'vegetables'
+     WHERE store_type IS NULL AND category_id IN ('fruits', 'vegetables', 'organic')`
+  );
+  getDb().run(
+    `UPDATE products SET store_type = 'general'
+     WHERE store_type IS NULL OR store_type = ''`
+  );
+}
+
+async function backfillWholesalerAssignments() {
+  const pending = queryAll(
+    `SELECT id, user_id FROM orders WHERE status NOT IN ('cancelled')`
+  );
+  for (const order of pending) {
+    await assignOrderToWholesaler(order.id, order.user_id);
+  }
+}
+
+function migrateCodPaymentStatus() {
+  getDb().run(
+    `UPDATE orders
+     SET payment_status = 'pending'
+     WHERE payment_method = 'cod'
+       AND status != 'delivered'
+       AND payment_status IN ('cod', 'paid')`
+  );
+  getDb().run(
+    `UPDATE orders
+     SET payment_status = 'paid'
+     WHERE payment_method = 'cod' AND status = 'delivered'`
+  );
 }
 
 function migrateUserAddresses() {
@@ -377,13 +698,7 @@ function migrateLocationCatalog() {
 }
 
 const DEMO_ORDER_ITEMS = {
-  'MB-10482': [
-    ['p1', 2, 28],
-    ['p3', 1, 45],
-    ['p5', 1, 72],
-    ['p6', 1, 48],
-    ['p8', 2, 32],
-  ],
+  [DEMO_ORDER_ID]: DEMO_ORDER_LINE_ITEMS,
 };
 
 function migrateOrderItems() {
@@ -405,10 +720,6 @@ function migrateOrderItems() {
       );
     });
   });
-
-  if (orphans.some((order) => DEMO_ORDER_ITEMS[order.id])) {
-    saveDatabase();
-  }
 }
 
 function migrateProductImages() {
@@ -457,26 +768,18 @@ export function getDb() {
 }
 
 export function queryAll(sql, params = []) {
-  const stmt = getDb().prepare(sql);
-  stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return rows;
+  return getDb().native.prepare(sql).all(...bindParams(params));
 }
 
 export function queryOne(sql, params = []) {
-  return queryAll(sql, params)[0] ?? null;
+  return getDb().native.prepare(sql).get(...bindParams(params)) ?? null;
 }
 
 export function run(sql, params = []) {
   getDb().run(sql, params);
-  saveDatabase();
 }
 
 export function transaction(fn) {
-  fn();
-  saveDatabase();
+  const wrapped = getDb().native.transaction(fn);
+  wrapped();
 }

@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { radius, shadows, spacing } from '@/constants/theme';
+import { useReferralEnabled } from '@/hooks/useReferralEnabled';
 import { useWalletEnabled } from '@/hooks/useWalletEnabled';
 import { useAuth } from '@/context/AuthContext';
 import { useDeliveryArea } from '@/context/DeliveryAreaContext';
@@ -12,7 +13,13 @@ import { useSignOut } from '@/hooks/useSignOut';
 import { getNotificationsEnabled } from '@/lib/notificationPrefs';
 import { useColorScheme } from '@/components/useColorScheme';
 
-type MenuRoute = '/profile/address' | '/profile/wallet' | '/profile/email' | '/profile/notifications' | '/profile/help';
+type MenuRoute =
+  | '/profile/address'
+  | '/profile/wallet'
+  | '/profile/refer'
+  | '/profile/email'
+  | '/profile/notifications'
+  | '/profile/help';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -22,6 +29,7 @@ export default function ProfileScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const walletEnabled = useWalletEnabled();
+  const referralEnabled = useReferralEnabled();
   const [notificationsOn, setNotificationsOn] = useState(true);
 
   useFocusEffect(
@@ -56,6 +64,16 @@ export default function ProfileScreen() {
             label: 'Wallet',
             value: `₹${(user?.walletBalance ?? 0).toFixed(2)}`,
             route: '/profile/wallet' as const,
+          },
+        ]
+      : []),
+    ...(referralEnabled
+      ? [
+          {
+            icon: 'gift-outline' as const,
+            label: 'Refer & Earn',
+            value: user?.referralCode ?? 'Share code',
+            route: '/profile/refer' as const,
           },
         ]
       : []),

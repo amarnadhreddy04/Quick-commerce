@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { v4 as uuid } from 'uuid';
 
+import { insertDemoOrderLineItems } from './demoOrderItems.js';
 import { initDatabase, queryOne, run, transaction } from './db.js';
 import { BANNER_IMAGES, CATEGORY_IMAGES, PRODUCT_IMAGE_SETS } from './mediaUrls.js';
 
@@ -93,22 +94,11 @@ transaction(() => {
     ['MB-10482', customerId, '7 Jun 2026', 312, 'Tomorrow, 6:00 AM', 5]
   );
 
-  [
-    ['p1', 2, 28],
-    ['p3', 1, 45],
-    ['p5', 1, 72],
-    ['p6', 1, 48],
-    ['p8', 2, 32],
-  ].forEach(([productId, quantity, price]) => {
-    run(
-      'INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES (?, ?, ?, ?, ?)',
-      [uuid(), 'MB-10482', productId, quantity, price]
-    );
-  });
+  insertDemoOrderLineItems(run);
 
   run(
-    `INSERT INTO app_settings (id, delivery_cutoff, delivery_slot, min_order_value, delivery_fee, wallet_enabled)
-     VALUES (1, ?, ?, ?, ?, 0)`,
+    `INSERT INTO app_settings (id, delivery_cutoff, delivery_slot, min_order_value, delivery_fee, wallet_enabled, subscription_enabled, platform_fee_enabled, platform_fee)
+     VALUES (1, ?, ?, ?, ?, 0, 0, 1, 5)`,
     ['11:00 PM', 'Tomorrow, 6:00 AM – 8:00 AM', 299, 30]
   );
 

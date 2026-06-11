@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -9,6 +9,7 @@ import { radius, shadows, spacing } from '@/constants/theme';
 import { useWalletEnabled } from '@/hooks/useWalletEnabled';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import { useCatalog } from '@/context/CatalogContext';
 import { calculateOrderTotal, freeDeliveryMessage } from '@/lib/cartFees';
 import { getPaymentConfig, PaymentConfig } from '@/lib/payments';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -16,22 +17,28 @@ type PaymentMethod = 'razorpay' | 'wallet' | 'cod';
 
 export default function PaymentScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const { token, user } = useAuth();
-  const { items, subtotal } = useCart();
+  const { settings } = useCatalog();
+  const { items, subtotal, appliedPromo } = useCart();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const walletEnabled = useWalletEnabled();
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
 
-  const { deliveryFee, total } = calculateOrderTotal(subtotal);
-  const deliveryHint = freeDeliveryMessage(subtotal);
+  const { deliveryFee, platformFee, promoDiscount, total } = calculateOrderTotal(
+    subtotal,
+    settings,
+    appliedPromo?.discount ?? 0
+  );
+  const deliveryHint = freeDeliveryMessage(subtotal, settings);
   const isDemoMode = paymentConfig?.demoMode ?? !paymentConfig?.configured;
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (items.length === 0 && pathname === '/payment') {
       router.replace('/(tabs)/cart');
     }
-  }, [items.length, router]);
+  }, [items.length, router, pathname]);
 
   useEffect(() => {
     if (!token) return;
@@ -76,12 +83,23 @@ export default function PaymentScreen() {
               <Text style={[styles.deliveryHint, { color: colors.primary }]}>{deliveryHint}</Text>
             ) : null}
             <SummaryRow label="Subtotal" value={`₹${subtotal}`} colors={colors} />
+            {promoDiscount > 0 ? (
+              <SummaryRow
+                label={`Promo (${appliedPromo?.code})`}
+                value={`-₹${promoDiscount}`}
+                colors={colors}
+                highlight
+              />
+            ) : null}
             <SummaryRow
               label="Delivery Fee"
               value={deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
               colors={colors}
               highlight={deliveryFee === 0}
             />
+            {platformFee > 0 ? (
+              <SummaryRow label="Platform Fee" value={`₹${platformFee}`} colors={colors} />
+            ) : null}
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <SummaryRow label="Total" value={`₹${total}`} colors={colors} bold />
           </View>

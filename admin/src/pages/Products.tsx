@@ -7,13 +7,16 @@ import ProductImagesField, {
   MIN_PRODUCT_IMAGES,
 } from '../components/ProductImagesField';
 import '../components/shared.css';
+import { isSuperAdmin } from '../lib/roles';
+import { STORE_TYPES } from '../lib/storeTypes';
 import { useAdminStore } from '../store/AdminStore';
-import type { Product } from '../types';
+import type { Product, StoreType } from '../types';
 
 type ProductForm = {
   name: string;
   brand: string;
   categoryId: string;
+  storeType: StoreType;
   price: number;
   mrp: number;
   unit: string;
@@ -29,6 +32,7 @@ const emptyProduct: ProductForm = {
   name: '',
   brand: '',
   categoryId: 'milk',
+  storeType: 'milk_bread',
   price: 0,
   mrp: 0,
   unit: '',
@@ -62,7 +66,8 @@ function validateImages(images: string[]): string | null {
 }
 
 export default function Products() {
-  const { products, categories, addProduct, updateProduct, deleteProduct } = useAdminStore();
+  const { products, categories, user, addProduct, updateProduct, deleteProduct } = useAdminStore();
+  const canManage = user ? isSuperAdmin(user.role) : false;
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyProduct);
@@ -82,6 +87,7 @@ export default function Products() {
       name: product.name,
       brand: product.brand,
       categoryId: product.categoryId,
+      storeType: product.storeType ?? 'general',
       price: product.price,
       mrp: product.mrp ?? 0,
       unit: product.unit,
@@ -110,6 +116,7 @@ export default function Products() {
       name: form.name,
       brand: form.brand,
       categoryId: form.categoryId,
+      storeType: form.storeType,
       price: form.price,
       mrp: form.mrp || undefined,
       unit: form.unit,
@@ -139,9 +146,11 @@ export default function Products() {
         title="Products"
         subtitle="Each product needs 2 to 5 image URLs"
         action={
-          <button type="button" className="btn btn-primary" onClick={openCreate}>
-            + Add Product
-          </button>
+          canManage ? (
+            <button type="button" className="btn btn-primary" onClick={openCreate}>
+              + Add Product
+            </button>
+          ) : undefined
         }
       />
 
@@ -152,6 +161,7 @@ export default function Products() {
               <tr>
                 <th>Product</th>
                 <th>Category</th>
+                <th>Store</th>
                 <th>Price</th>
                 <th>Stock</th>
                 <th>Locations</th>
@@ -182,6 +192,10 @@ export default function Products() {
                       ) : null}
                     </td>
                     <td>{getCategoryName(product.categoryId)}</td>
+                    <td>
+                      {STORE_TYPES.find((entry) => entry.id === product.storeType)?.label ??
+                        'Auto from category'}
+                    </td>
                     <td>₹{product.price}</td>
                     <td>{product.stock}</td>
                     <td>
@@ -201,18 +215,24 @@ export default function Products() {
                       </span>
                     </td>
                     <td className="actions">
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => openEdit(product)}>
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm"
-                        onClick={() => deleteProduct(product.id)}>
-                        Delete
-                      </button>
+                      {canManage ? (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => openEdit(product)}>
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            onClick={() => deleteProduct(product.id)}>
+                            Delete
+                          </button>
+                        </>
+                      ) : (
+                        <span style={{ color: '#64748b' }}>View only</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -251,6 +271,18 @@ export default function Products() {
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Store type
+                <select
+                  value={form.storeType}
+                  onChange={(e) => setForm({ ...form, storeType: e.target.value as StoreType })}>
+                  {STORE_TYPES.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.label}
                     </option>
                   ))}
                 </select>

@@ -208,6 +208,45 @@ export default function Settings() {
           </label>
         </div>
 
+        <h3 style={{ marginTop: 24 }}>Platform Fee</h3>
+        <p style={{ color: '#64748b', marginTop: 0 }}>
+          A flat fee added to every order. Disable it or change the amount anytime.
+        </p>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '8px 0 16px',
+            cursor: 'pointer',
+          }}>
+          <input
+            type="checkbox"
+            checked={form.platformFeeEnabled}
+            onChange={(e) => setForm({ ...form, platformFeeEnabled: e.target.checked })}
+            style={{ width: 18, height: 18 }}
+          />
+          <span>
+            <strong>Enable platform fee</strong>
+            <br />
+            <span style={{ color: '#64748b', fontSize: 14 }}>
+              When enabled, the fee below is added to each order at checkout
+            </span>
+          </span>
+        </label>
+        <label>
+          Platform Fee (₹)
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={form.platformFee}
+            onChange={(e) => setForm({ ...form, platformFee: Number(e.target.value) })}
+            disabled={!form.platformFeeEnabled}
+            required
+          />
+        </label>
+
         <div className="modal-actions">
           {saved ? <span className="badge green">Saved!</span> : null}
           <button type="submit" className="btn btn-primary">
@@ -242,6 +281,61 @@ export default function Settings() {
               Show wallet balance, profile menu, and pay-with-wallet at checkout
             </span>
           </span>
+        </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 0',
+            cursor: 'pointer',
+          }}>
+          <input
+            type="checkbox"
+            checked={form.subscriptionEnabled}
+            onChange={(e) => setForm({ ...form, subscriptionEnabled: e.target.checked })}
+            style={{ width: 18, height: 18 }}
+          />
+          <span>
+            <strong>Subscriptions</strong>
+            <br />
+            <span style={{ color: '#64748b', fontSize: 14 }}>
+              Show subscribe badges, daily essentials, and active subscriptions on the Orders tab
+            </span>
+          </span>
+        </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 0',
+            cursor: 'pointer',
+          }}>
+          <input
+            type="checkbox"
+            checked={form.referralEnabled ?? true}
+            onChange={(e) => setForm({ ...form, referralEnabled: e.target.checked })}
+            style={{ width: 18, height: 18 }}
+          />
+          <span>
+            <strong>Refer & Earn</strong>
+            <br />
+            <span style={{ color: '#64748b', fontSize: 14 }}>
+              Show referral menu in the app and credit wallet rewards when friends sign up
+            </span>
+          </span>
+        </label>
+        <label>
+          Referral reward (₹ per sign-up)
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={form.referralRewardAmount ?? 50}
+            onChange={(e) => setForm({ ...form, referralRewardAmount: Number(e.target.value) })}
+            disabled={form.referralEnabled === false}
+          />
         </label>
         <div className="modal-actions">
           {saved ? <span className="badge green">Saved!</span> : null}

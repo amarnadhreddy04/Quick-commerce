@@ -60,13 +60,23 @@ export type CartItem = {
   quantity: number;
 };
 
+export type AppliedPromo = {
+  code: string;
+  discount: number;
+};
+
 export type Order = {
   id: string;
   date: string;
-  status: 'delivered' | 'scheduled' | 'cancelled' | 'pending_payment';
+  status: 'delivered' | 'scheduled' | 'cancelled' | 'pending_payment' | 'processing';
   items: number;
   total: number;
   deliverySlot: string;
+  deliveryFee?: number | null;
+  platformFee?: number | null;
+  promoCode?: string | null;
+  promoDiscount?: number | null;
+  riderStatus?: string | null;
 };
 
 export type OrderLineItem = {

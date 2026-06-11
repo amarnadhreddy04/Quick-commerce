@@ -32,11 +32,20 @@ async function withStoredPincode(user: ApiUser): Promise<ApiUser> {
   return user;
 }
 
+export function isRiderUser(user: ApiUser | null) {
+  return user?.role === 'rider';
+}
+
+export function isCustomerUser(user: ApiUser | null) {
+  return user?.role === 'customer';
+}
+
 type AuthContextValue = {
   user: ApiUser | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  isRider: boolean;
+  login: (email: string, password: string) => Promise<{ isRider: boolean }>;
   register: (payload: {
     name: string;
     email: string;
@@ -44,6 +53,9 @@ type AuthContextValue = {
     password: string;
     location?: string;
     pincode: string;
+    acceptedTerms: boolean;
+    termsVersion?: string;
+    referralCode?: string;
   }) => Promise<RegisterNotifications>;
   refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
@@ -93,13 +105,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       loading,
+      isRider: isRiderUser(user),
       login: async (email, password) => {
         const { token: nextToken, user: nextUser } = await loginRequest(email, password);
-        if (nextUser.role !== 'customer') {
-          throw new Error('Please use the admin panel for admin accounts');
+        if (nextUser.role !== 'customer' && nextUser.role !== 'rider') {
+          throw new Error('Please use the admin panel for admin and vendor accounts');
         }
         const userWithPincode = await withStoredPincode(nextUser);
         await persistSession(nextToken, userWithPincode);
+        return { isRider: nextUser.role === 'rider' };
       },
       register: async (payload) => {
         const { token: nextToken, user: nextUser, notifications } = await registerRequest(payload);

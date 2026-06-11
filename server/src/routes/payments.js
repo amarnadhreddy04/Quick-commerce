@@ -75,7 +75,7 @@ router.post('/create-order', authRequired, async (req, res) => {
     transaction(() => {
       run(
         `INSERT INTO orders (id, user_id, date, status, total, delivery_slot, items_count, payment_status, payment_method, razorpay_order_id, razorpay_payment_id)
-         VALUES (?, ?, ?, 'scheduled', ?, ?, ?, 'cod', 'cod', NULL, NULL)`,
+         VALUES (?, ?, ?, 'scheduled', ?, ?, ?, 'pending', 'cod', NULL, NULL)`,
         [orderId, req.user.id, date, total, deliverySlot, items.length]
       );
       items.forEach((item) => {

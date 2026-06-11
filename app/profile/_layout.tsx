@@ -12,6 +12,7 @@ export default function ProfileLayout() {
       <Stack.Screen name="email" options={{ title: 'Email' }} />
       <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
       <Stack.Screen name="help" options={{ title: 'Help & Support' }} />
+      <Stack.Screen name="refer" options={{ title: 'Refer & Earn' }} />
     </Stack>
   );
 }

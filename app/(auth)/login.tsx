@@ -35,8 +35,8 @@ export default function LoginScreen() {
     setError('');
     setLoading(true);
     try {
-      await login(email.trim(), password);
-      router.replace('/(tabs)');
+      const { isRider } = await login(email.trim(), password);
+      router.replace(isRider ? '/(rider)/deliveries' : '/(tabs)');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -58,7 +58,7 @@ export default function LoginScreen() {
           <Text style={styles.logo}>🥛</Text>
           <Text style={[styles.title, { color: colors.primary }]}>Milkbasket</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Daily essentials delivered to your door
+            Customers shop here · Riders sign in to deliver orders
           </Text>
         </View>
 
@@ -114,7 +114,7 @@ export default function LoginScreen() {
         <View style={[styles.hint, { backgroundColor: colors.wallet }]}>
           <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
           <Text style={[styles.hintText, { color: colors.text }]}>
-            Demo: amar@example.com / user123
+            Customer: amar@example.com / user123 · Rider: suresh.rider@example.com / rider123
           </Text>
         </View>
       </ScrollView>

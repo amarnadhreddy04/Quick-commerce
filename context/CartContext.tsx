@@ -1,16 +1,30 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 
+import { clearStoredCart, loadStoredCart, saveStoredCart } from '@/lib/cartStorage';
 import { canIncreaseQuantity, getProductStock, isOutOfStock } from '@/lib/productStock';
-import { CartItem, Product } from '@/types';
+import type { AppliedPromo, CartItem, Product } from '@/types';
+
+export type { AppliedPromo };
 
 type CartContextValue = {
   items: CartItem[];
   itemCount: number;
   subtotal: number;
+  appliedPromo: AppliedPromo | null;
   addItem: (product: Product) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   getQuantity: (productId: string) => number;
+  applyPromo: (promo: AppliedPromo) => void;
+  removePromo: () => void;
   clearCart: () => void;
 };
 
@@ -18,6 +32,38 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    loadStoredCart()
+      .then((stored) => {
+        if (!stored) return;
+        setItems(stored.items);
+        setAppliedPromo(stored.appliedPromo);
+      })
+      .catch(() => undefined)
+      .finally(() => setHydrated(true));
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    saveStoredCart({ items, appliedPromo }).catch(() => undefined);
+  }, [items, appliedPromo, hydrated]);
+
+  const applyPromo = useCallback((promo: AppliedPromo) => {
+    setAppliedPromo(promo);
+  }, []);
+
+  const removePromo = useCallback(() => {
+    setAppliedPromo(null);
+  }, []);
+
+  const clearCart = useCallback(() => {
+    setItems([]);
+    setAppliedPromo(null);
+    clearStoredCart().catch(() => undefined);
+  }, []);
 
   const value = useMemo<CartContextValue>(() => {
     const addItem = (product: Product) => {
@@ -70,13 +116,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items,
       itemCount,
       subtotal,
+      appliedPromo,
       addItem,
       removeItem,
       updateQuantity,
       getQuantity,
-      clearCart: () => setItems([]),
+      applyPromo,
+      removePromo,
+      clearCart,
     };
-  }, [items]);
+  }, [items, appliedPromo, applyPromo, removePromo, clearCart]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
