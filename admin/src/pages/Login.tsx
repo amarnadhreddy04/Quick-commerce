@@ -31,7 +31,7 @@ export default function Login() {
       <form className="login-card" onSubmit={handleSubmit}>
         <div className="login-brand">
           <span>🥛</span>
-          <h1>Milkbasket Panel</h1>
+          <h1>Pachari Panel</h1>
           <p>Super Admin · Location Admin · Wholesaler</p>
         </div>
 

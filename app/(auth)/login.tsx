@@ -56,7 +56,7 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled">
         <View style={styles.brand}>
           <Text style={styles.logo}>🥛</Text>
-          <Text style={[styles.title, { color: colors.primary }]}>Milkbasket</Text>
+          <Text style={[styles.title, { color: colors.primary }]}>Pachari</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Customers shop here · Riders sign in to deliver orders
           </Text>
@@ -101,7 +101,7 @@ export default function LoginScreen() {
 
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-              New to Milkbasket?
+              New to Pachari?
             </Text>
             <Link href="/register" asChild>
               <Pressable>

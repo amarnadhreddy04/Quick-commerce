@@ -79,7 +79,7 @@ transaction(() => {
   run(
     `INSERT INTO users (id, name, email, phone, password_hash, role, location, wallet_balance, active)
      VALUES (?, ?, ?, ?, ?, 'admin', ?, 0, 1)`,
-    [adminId, 'Milkbasket Admin', 'admin@milkbasket.com', '+91 90000 00001', hash('admin123'), 'Noida HQ']
+    [adminId, 'Pachari Admin', 'admin@milkbasket.com', '+91 90000 00001', hash('admin123'), 'Noida HQ']
   );
 
   run(

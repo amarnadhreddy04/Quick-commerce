@@ -39,5 +39,5 @@ app.use((err, _req, res, _next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Milkbasket API running at http://localhost:${PORT}`);
+  console.log(`Pachari API running at http://localhost:${PORT}`);
 });

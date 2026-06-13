@@ -6,7 +6,7 @@ import { queryOne, run } from './db.js';
 const DEMO_USERS = [
   {
     email: 'admin@milkbasket.com',
-    name: 'Milkbasket Admin',
+    name: 'Pachari Admin',
     phone: '+91 90000 00001',
     password: 'admin123',
     role: 'admin',

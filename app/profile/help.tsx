@@ -38,8 +38,8 @@ export default function HelpScreen() {
         </Text>
         <Pressable
           style={[styles.contactButton, { backgroundColor: colors.primary }]}
-          onPress={() => Linking.openURL('mailto:support@milkbasket.com')}>
-          <Text style={styles.contactText}>Email support@milkbasket.com</Text>
+          onPress={() => Linking.openURL('mailto:support@pachari.com')}>
+          <Text style={styles.contactText}>Email support@pachari.com</Text>
         </Pressable>
         <Pressable
           style={[styles.contactButton, { backgroundColor: colors.wallet, borderColor: colors.primary }]}

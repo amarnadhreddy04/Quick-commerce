@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Milkbasket",
+    "name": "Pachari",
     "slug": "milkbasket-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Milkbasket uses your location to check if delivery is available in your area."
+        "NSLocationWhenInUseUsageDescription": "Pachari uses your location to check if delivery is available in your area."
       }
     },
     "android": {
@@ -36,7 +36,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Milkbasket uses your location to check if delivery is available in your area."
+          "locationWhenInUsePermission": "Pachari uses your location to check if delivery is available in your area."
         }
       ],
       [

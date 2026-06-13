@@ -27,7 +27,7 @@ export default function Layout() {
         <div className="brand">
           <span className="brand-icon">🥛</span>
           <div>
-            <h1>Milkbasket</h1>
+            <h1>Pachari</h1>
             <p>Super Admin</p>
           </div>
         </div>

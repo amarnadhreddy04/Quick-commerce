@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-const APP_NAME = 'Milkbasket';
+const APP_NAME = 'Pachari';
 
 function formatPhone(phone) {
   if (!phone) return null;
@@ -40,7 +40,7 @@ async function createMailTransport() {
 
 export async function sendWelcomeEmail({ name, email }) {
   const transport = await createMailTransport();
-  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@milkbasket.com>`;
+  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@pachari.com>`;
 
   const info = await transport.sendMail({
     from,

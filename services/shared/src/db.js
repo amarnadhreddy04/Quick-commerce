@@ -522,12 +522,6 @@ function backfillRiderAssignments() {
 }
 
 function migrateWholesalers() {
-  const wholesalerColumns = queryAll('PRAGMA table_info(wholesalers)');
-  const wholesalerColumnNames = new Set(wholesalerColumns.map((col) => col.name));
-  if (!wholesalerColumnNames.has('store_type')) {
-    getDb().run("ALTER TABLE wholesalers ADD COLUMN store_type TEXT NOT NULL DEFAULT 'general'");
-  }
-
   getDb().exec(`
     CREATE TABLE IF NOT EXISTS wholesalers (
       id TEXT PRIMARY KEY,
@@ -558,6 +552,12 @@ function migrateWholesalers() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  const wholesalerColumns = queryAll('PRAGMA table_info(wholesalers)');
+  const wholesalerColumnNames = new Set(wholesalerColumns.map((col) => col.name));
+  if (!wholesalerColumnNames.has('store_type')) {
+    getDb().run("ALTER TABLE wholesalers ADD COLUMN store_type TEXT NOT NULL DEFAULT 'general'");
+  }
 
   const demoStores = [
     {

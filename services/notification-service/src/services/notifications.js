@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-const APP_NAME = 'Milkbasket';
+const APP_NAME = 'Pachari';
 
 function formatPhone(phone) {
   if (!phone) return null;
@@ -40,7 +40,7 @@ async function createMailTransport() {
 
 export async function sendWelcomeEmail({ name, email }) {
   const transport = await createMailTransport();
-  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@milkbasket.com>`;
+  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@pachari.com>`;
 
   const info = await transport.sendMail({
     from,
@@ -145,7 +145,7 @@ export async function sendWelcomeSms({ name, phone }) {
 
 export async function sendStockAvailableEmail({ name, email, productName }) {
   const transport = await createMailTransport();
-  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@milkbasket.com>`;
+  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@pachari.com>`;
 
   const info = await transport.sendMail({
     from,
@@ -235,7 +235,7 @@ export async function sendVendorOrderNotification({
   storeType,
 }) {
   const transport = await createMailTransport();
-  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@milkbasket.com>`;
+  const from = process.env.SMTP_FROM ?? `"${APP_NAME}" <noreply@pachari.com>`;
   const storeLabel =
     storeType === 'vegetables'
       ? 'Vegetable Store'
@@ -279,7 +279,7 @@ export async function sendVendorOrderNotification({
     console.error('[Email] Vendor order notify failed:', error.message);
   }
 
-  const smsMessage = `${shopName}: new order ${orderId} (${itemCount} items, payout ₹${wholesaleCost}). Pack now in Milkbasket vendor portal.`;
+  const smsMessage = `${shopName}: new order ${orderId} (${itemCount} items, payout ₹${wholesaleCost}). Pack now in Pachari vendor portal.`;
   if (phone) {
     try {
       if (process.env.FAST2SMS_API_KEY) {

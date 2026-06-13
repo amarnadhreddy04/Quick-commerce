@@ -51,7 +51,7 @@ const orderPort = Number(process.env.ORDER_PORT || 3013);
 
 if (await isPortInUse(gatewayPort) || await isPortInUse(orderPort)) {
   console.error(
-    `\nMilkbasket API ports are already in use (${gatewayPort}, ${orderPort}, ...).`
+    `\nPachari API ports are already in use (${gatewayPort}, ${orderPort}, ...).`
   );
   console.error('Run "npm run server:restart" from the project root, or stop the old terminal with Ctrl+C.\n');
   process.exit(1);

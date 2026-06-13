@@ -15,6 +15,7 @@ import { assignOrderToWholesaler } from '../../../shared/src/wholesalerAssignmen
 import {
   createRazorpayOrder,
   getRazorpayKeyId,
+  getRazorpayMode,
   isRazorpayConfigured,
   verifyPaymentSignature,
 } from '../services/razorpay.js';
@@ -48,18 +49,37 @@ function isWalletEnabled() {
 }
 
 function paymentMethods() {
-  const base = isRazorpayConfigured() ? ['razorpay', 'wallet', 'cod'] : ['demo', 'wallet', 'cod'];
+  const mode = getRazorpayMode();
+  let base;
+
+  if (mode === 'demo') {
+    base = ['demo', 'wallet', 'cod'];
+  } else if (mode === 'live-unconfigured') {
+    base = ['wallet', 'cod'];
+  } else {
+    base = ['razorpay', 'wallet', 'cod'];
+  }
+
   return isWalletEnabled() ? base : base.filter((method) => method !== 'wallet');
 }
 
 router.get('/config', authRequired, (_req, res) => {
+  const mode = getRazorpayMode();
+  const configured = isRazorpayConfigured();
+
   res.json({
     provider: 'razorpay',
-    keyId: getRazorpayKeyId(),
-    configured: isRazorpayConfigured(),
+    keyId: configured ? getRazorpayKeyId() : '',
+    configured,
+    mode,
     currency: 'INR',
     methods: paymentMethods(),
-    demoMode: !isRazorpayConfigured(),
+    demoMode: mode === 'demo',
+    setupRequired: mode === 'live-unconfigured',
+    setupMessage:
+      mode === 'live-unconfigured'
+        ? 'Add live Razorpay keys (rzp_live_...) to services/.env and restart npm run server.'
+        : null,
   });
 });
 
@@ -304,7 +324,7 @@ router.post('/verify', authRequired, async (req, res) => {
 
   transaction(() => {
     run(
-      `UPDATE orders SET payment_status = 'paid', razorpay_payment_id = ?, payment_method = 'razorpay'
+      `UPDATE orders SET status = 'scheduled', payment_status = 'paid', razorpay_payment_id = ?, payment_method = 'razorpay'
        WHERE id = ?`,
       [razorpayPaymentId, orderId]
     );

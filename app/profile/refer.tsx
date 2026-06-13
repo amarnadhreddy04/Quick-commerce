@@ -49,8 +49,8 @@ export default function ReferScreen() {
     if (!stats?.code) return;
     const reward = settings.referralRewardAmount ?? stats.rewardPerReferral;
     await Share.share({
-      message: `Join Milkbasket for morning milk & groceries delivery! Use my referral code ${stats.code} when you sign up. We both benefit — you get great daily essentials delivered early morning.`,
-      title: `Milkbasket — Refer & Earn ₹${reward}`,
+      message: `Join Pachari for morning milk & groceries delivery! Use my referral code ${stats.code} when you sign up. We both benefit — you get great daily essentials delivered early morning.`,
+      title: `Pachari — Refer & Earn ₹${reward}`,
     });
   };
 
@@ -80,7 +80,7 @@ export default function ReferScreen() {
         <Ionicons name="gift-outline" size={32} color="#fff" />
         <Text style={styles.heroTitle}>Refer & Earn</Text>
         <Text style={styles.heroSubtitle}>
-          Invite friends to Milkbasket. Earn ₹{stats.rewardPerReferral} in your wallet when they sign up
+          Invite friends to Pachari. Earn ₹{stats.rewardPerReferral} in your wallet when they sign up
           with your code.
         </Text>
       </View>

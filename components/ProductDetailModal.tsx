@@ -26,7 +26,7 @@ export default function ProductDetailModal({ product, onClose }: Props) {
   const discount = product.mrp ? product.mrp - product.price : 0;
   const description =
     product.description?.trim() ||
-    'Fresh quality product delivered to your doorstep with Milkbasket morning delivery.';
+    'Fresh quality product delivered to your doorstep with Pachari morning delivery.';
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>

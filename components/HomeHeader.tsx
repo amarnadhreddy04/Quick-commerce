@@ -29,7 +29,7 @@ export default function HomeHeader() {
       ]}>
       <View style={styles.brandRow}>
         <View>
-          <Text style={[styles.brand, { color: colors.primary }]}>Milkbasket</Text>
+          <Text style={[styles.brand, { color: colors.primary }]}>Pachari</Text>
           <Pressable
             onPress={() => router.push('/profile/address')}
             style={styles.locationRow}

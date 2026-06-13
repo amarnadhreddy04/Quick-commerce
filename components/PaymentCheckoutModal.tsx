@@ -1,21 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import Colors from '@/constants/Colors';
 import { radius, spacing } from '@/constants/theme';
-import { buildRazorpayHtml, RazorpayCheckoutData } from '@/lib/payments';
+import {
+  buildRazorpayHtml,
+  openRazorpayWebCheckout,
+  RazorpayCheckoutData,
+  RazorpaySuccessPayload,
+} from '@/lib/payments';
 import { useColorScheme } from '@/components/useColorScheme';
 
 type Props = {
   visible: boolean;
   data: RazorpayCheckoutData | null;
   loading?: boolean;
-  onSuccess: (payment: {
-    razorpayPaymentId: string;
-    razorpayOrderId: string;
-    razorpaySignature: string;
-  }) => void;
+  onSuccess: (payment: RazorpaySuccessPayload) => void;
   onClose: () => void;
 };
 
@@ -31,13 +32,29 @@ export default function PaymentCheckoutModal({
 
   if (!data) return null;
 
-  const handleDemoPay = () => {
-    onSuccess({
-      razorpayPaymentId: `pay_demo_${Date.now()}`,
-      razorpayOrderId: data.razorpayOrderId,
-      razorpaySignature: 'demo_signature',
-    });
+  const amountLabel = `₹${(data.amount / 100).toFixed(2)}`;
+  const isWeb = Platform.OS === 'web';
+
+  const handlePayPress = async () => {
+    if (data.demo) {
+      onSuccess({
+        razorpayPaymentId: `pay_demo_${Date.now()}`,
+        razorpayOrderId: data.razorpayOrderId,
+        razorpaySignature: 'demo_signature',
+      });
+      return;
+    }
+
+    if (isWeb) {
+      try {
+        await openRazorpayWebCheckout(data, onSuccess, onClose);
+      } catch {
+        // User dismissed or script failed — modal stays open
+      }
+    }
   };
+
+  const showPayButton = data.demo || isWeb;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -61,26 +78,32 @@ export default function PaymentCheckoutModal({
             </View>
           ) : (
             <Text style={[styles.liveText, { color: colors.textSecondary }]}>
-              Secured by Razorpay (UPI, Card, Netbanking)
+              Secured by Razorpay — UPI, cards, netbanking
             </Text>
           )}
         </View>
 
-        {data.demo ? (
+        {showPayButton ? (
           <View style={styles.demoBody}>
             <Ionicons name="shield-checkmark-outline" size={48} color={colors.primary} />
-            <Text style={[styles.demoTitle, { color: colors.text }]}>Test Payment Gateway</Text>
+            <Text style={[styles.demoTitle, { color: colors.text }]}>
+              {data.demo ? 'Test Payment Gateway' : 'Secure Razorpay Checkout'}
+            </Text>
             <Text style={[styles.demoSubtitle, { color: colors.textSecondary }]}>
-              Tap below to simulate a successful payment and place your order.
+              {data.demo
+                ? 'Tap below to simulate a successful payment and place your order.'
+                : 'Tap below to open Razorpay and pay with UPI, card, or netbanking.'}
             </Text>
             <Pressable
-              onPress={handleDemoPay}
+              onPress={handlePayPress}
               disabled={loading}
               style={[styles.payButton, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}>
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.payButtonText}>Pay ₹{(data.amount / 100).toFixed(2)} (Demo)</Text>
+                <Text style={styles.payButtonText}>
+                  {data.demo ? `Pay ${amountLabel} (Demo)` : `Pay ${amountLabel}`}
+                </Text>
               )}
             </Pressable>
           </View>

@@ -6,7 +6,7 @@ export const TERMS_SECTIONS = [
   {
     title: '1. Acceptance',
     body:
-      'By creating a Milkbasket account, you agree to these Terms & Conditions and our delivery policies. If you do not agree, please do not register or use the service.',
+      'By creating a Pachari account, you agree to these Terms & Conditions and our delivery policies. If you do not agree, please do not register or use the service.',
   },
   {
     title: '2. Service area',
@@ -36,7 +36,7 @@ export const TERMS_SECTIONS = [
   {
     title: '7. Limitation of liability',
     body:
-      'Milkbasket is not liable for delays caused by factors outside our control, including weather, traffic, or incorrect address details provided by you.',
+      'Pachari is not liable for delays caused by factors outside our control, including weather, traffic, or incorrect address details provided by you.',
   },
   {
     title: '8. Changes',
@@ -45,6 +45,6 @@ export const TERMS_SECTIONS = [
   },
   {
     title: '9. Contact',
-    body: 'For support, contact us at support@milkbasket.com or through the Help section in the app.',
+    body: 'For support, contact us at support@pachari.com or through the Help section in the app.',
   },
 ];

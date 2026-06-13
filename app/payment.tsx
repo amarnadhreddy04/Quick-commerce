@@ -32,7 +32,10 @@ export default function PaymentScreen() {
     appliedPromo?.discount ?? 0
   );
   const deliveryHint = freeDeliveryMessage(subtotal, settings);
-  const isDemoMode = paymentConfig?.demoMode ?? !paymentConfig?.configured;
+  const paymentMode = paymentConfig?.mode ?? (paymentConfig?.demoMode ? 'demo' : 'test');
+  const isDemoMode = paymentMode === 'demo';
+  const isLiveMode = paymentMode === 'live';
+  const setupRequired = paymentConfig?.setupRequired ?? paymentMode === 'live-unconfigured';
 
   useEffect(() => {
     if (items.length === 0 && pathname === '/payment') {
@@ -109,13 +112,33 @@ export default function PaymentScreen() {
             Tap a method to go to checkout
           </Text>
 
-          <PaymentOption
-            label={isDemoMode ? 'Demo Pay (Free)' : 'Razorpay'}
-            sublabel={isDemoMode ? 'Test payment — no real charge' : 'UPI, Card, Netbanking'}
-            icon={isDemoMode ? 'flask-outline' : 'card-outline'}
-            onPress={() => goToCheckout('razorpay')}
-            colors={colors}
-          />
+          {setupRequired ? (
+            <View style={[styles.setupBanner, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
+              <Ionicons name="warning-outline" size={20} color="#B45309" />
+              <Text style={styles.setupText}>
+                {paymentConfig?.setupMessage ??
+                  'Live Razorpay is enabled. Add your rzp_live_ keys to services/.env and restart the server.'}
+              </Text>
+            </View>
+          ) : null}
+
+          {(paymentConfig?.methods ?? []).includes('razorpay') || isDemoMode ? (
+            <PaymentOption
+              label={
+                isDemoMode ? 'Demo Pay (Free)' : isLiveMode ? 'Razorpay (Live)' : 'Razorpay (Test)'
+              }
+              sublabel={
+                isDemoMode
+                  ? 'Test payment — no real charge'
+                  : isLiveMode
+                    ? 'Real payments — UPI, Card, Netbanking'
+                    : 'Sandbox — UPI, Card, Netbanking'
+              }
+              icon={isDemoMode ? 'flask-outline' : 'card-outline'}
+              onPress={() => goToCheckout('razorpay')}
+              colors={colors}
+            />
+          ) : null}
 
           <PaymentOption
             label="Cash on Delivery"
@@ -215,6 +238,15 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: 100 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
   sectionHint: { fontSize: 13, marginTop: -spacing.xs },
+  setupBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+  },
+  setupText: { flex: 1, fontSize: 13, lineHeight: 18, color: '#92400E' },
   summaryCard: { padding: spacing.lg, borderRadius: radius.lg, gap: spacing.sm },
   summaryItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   itemImageWrap: {
